@@ -5,7 +5,7 @@ const { DateTime } = require("luxon");
 module.exports = function (appointmentCollection) {
     const app = express.Router();
 
-
+    
     function timeToMinutes(t) {
         // Expect: "h:mm AM" / "hh:mm PM"
         const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec((t || "").trim());
@@ -57,7 +57,7 @@ module.exports = function (appointmentCollection) {
         }
     });
 
-
+   
     app.post("/appointments", async (req, res) => {
         try {
             const body = req.body || {};
@@ -84,7 +84,7 @@ module.exports = function (appointmentCollection) {
         }
     });
 
-
+    
     app.delete("/appointments/:id", async (req, res) => {
         try {
             const result = await appointmentCollection.deleteOne({ _id: new ObjectId(req.params.id) });
@@ -97,30 +97,7 @@ module.exports = function (appointmentCollection) {
 
 
 
-    // GET /patients?q=term
-    app.get("/patients", async (req, res) => {
-        try {
-            const { q } = req.query;
-            const query = {};
-
-            if (q) {
-                const rx = { $regex: q, $options: "i" };
-                // name, address, mobile এ সার্চ
-                query.$or = [{ name: rx }, { address: rx }, { mobile: rx }];
-            }
-
-            const docs = await appointmentCollection
-                .find(query)
-                .sort({ date: -1 }) // latest first
-                .toArray();
-
-            res.send(docs);
-        } catch (e) {
-            console.error("GET /patients error:", e);
-            res.status(500).send({ message: "Failed to fetch patients" });
-        }
-    });
-
+    
 
     return app;
 };
