@@ -102,6 +102,18 @@ module.exports = function (appointmentCollection) {
     });
 
 
+    // PATCH /appointments/:id
+    app.patch("/appointments/:id", async (req, res) => {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const query={_id: new ObjectId(id)}
+        const updateDoc = {
+            $set: { status },
+        };
+        const result=await appointmentCollection.updateOne(query, updateDoc)
+        res.send(result)
+    });
 
 
 
