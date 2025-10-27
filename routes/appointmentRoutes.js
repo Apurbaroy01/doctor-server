@@ -5,7 +5,7 @@ const { DateTime } = require("luxon");
 module.exports = function (appointmentCollection) {
     const app = express.Router();
 
-    
+
     function timeToMinutes(t) {
         // Expect: "h:mm AM" / "hh:mm PM"
         const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec((t || "").trim());
@@ -57,7 +57,7 @@ module.exports = function (appointmentCollection) {
         }
     });
 
-   
+
     app.post("/appointments", async (req, res) => {
         try {
             const body = req.body || {};
@@ -84,7 +84,7 @@ module.exports = function (appointmentCollection) {
         }
     });
 
-    
+
     app.delete("/appointments/:id", async (req, res) => {
         try {
             const result = await appointmentCollection.deleteOne({ _id: new ObjectId(req.params.id) });
@@ -96,8 +96,14 @@ module.exports = function (appointmentCollection) {
     });
 
 
+    app.get("/appointmentsList", async (req, res) => {
+        const result = await appointmentCollection.find().toArray();
+        res.send(result);
+    });
 
-    
+
+
+
 
     return app;
 };
