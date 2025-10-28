@@ -1,6 +1,7 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
 const { DateTime } = require("luxon");
+const crypto = require("crypto");
 
 module.exports = function (appointmentCollection) {
     const app = express.Router();
@@ -61,24 +62,56 @@ module.exports = function (appointmentCollection) {
     app.post("/appointments", async (req, res) => {
         try {
             const body = req.body || {};
+            console.log(body)
 
+            // validate time format
             const timeMinutes = timeToMinutes(body.time);
             if (timeMinutes == null) {
-                return res.status(400).send({ message: "Invalid time format. Use like '10:20 AM'." });
+                return res
+                    .status(400)
+                    .send({ message: "Invalid time format. Use like '10:20 AM'." });
             }
 
-            const clash = await appointmentCollection.findOne({ date: body.date, time: body.time });
+            // check time clash for same date/time
+            const clash = await appointmentCollection.findOne({
+                date: body.date,
+                time: body.time,
+            });
             if (clash) {
-                return res.status(409).send({ message: "This time slot is already booked for the selected date." });
+                return res
+                    .status(409)
+                    .send({ message: "This time slot is already booked for the selected date." });
             }
 
-            const doc = { ...body, timeMinutes };
+            // check if phone already exists
+            let trackingId;
+            const existingAppointment = await appointmentCollection.findOne({
+                phone: body.phone,
+            });
+
+            if (existingAppointment) {
+                // reuse same trackingId
+                trackingId = existingAppointment.trackingId;
+            } else {
+                // create a new unique trackingId
+                trackingId = `TRK-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+            }
+
+            const doc = {
+                ...body,
+                timeMinutes,
+                trackingId,
+                createdAt: new Date(),
+            };
+
             const result = await appointmentCollection.insertOne(doc);
-            res.send(result);
+            res.send({ success: true, trackingId, insertedId: result.insertedId });
         } catch (err) {
             console.error("POST /appointments error:", err);
             if (err?.code === 11000) {
-                return res.status(409).send({ message: "Duplicate entry (trackingId or date+time)" });
+                return res
+                    .status(409)
+                    .send({ message: "Duplicate entry (trackingId or date+time)" });
             }
             res.status(500).send({ message: "Failed to create appointment" });
         }
@@ -107,13 +140,27 @@ module.exports = function (appointmentCollection) {
         const { id } = req.params;
         const { status } = req.body;
 
-        const query={_id: new ObjectId(id)}
+        const query = { _id: new ObjectId(id) }
         const updateDoc = {
             $set: { status },
         };
-        const result=await appointmentCollection.updateOne(query, updateDoc)
+        const result = await appointmentCollection.updateOne(query, updateDoc)
         res.send(result)
     });
+
+
+    app.get("/appointments/:id", async (req, res) => {
+        const id = req.params.id;
+        const result = await appointmentCollection.findOne({ _id: new ObjectId(id) });
+        res.send(result);
+    });
+
+    app.get("/appointments/:trackingId", async (req, res) => {
+        const trackingId = req.params.trackingId;
+        const result = await appointmentCollection.findOne({trackingId: trackingId });
+        res.send(result);
+    });
+
 
 
 
