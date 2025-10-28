@@ -155,11 +155,28 @@ module.exports = function (appointmentCollection) {
         res.send(result);
     });
 
-    app.get("/appointments/:trackingId", async (req, res) => {
-        const trackingId = req.params.trackingId;
-        const result = await appointmentCollection.findOne({trackingId: trackingId });
-        res.send(result);
+    app.get("/patient", async (req, res) => {
+        try {
+            const { trackingId } = req.query; 
+
+            if (!trackingId) {
+                return res.status(400).send({ message: "trackingId is required" });
+            }
+
+            const result = await appointmentCollection
+                .find({ trackingId })
+                .sort({ createdAt: -1 }) 
+                .toArray(); 
+
+            res.send(result);
+        } catch (error) {
+            console.error("Error fetching appointments:", error);
+            res.status(500).send({ message: "Server error" });
+        }
     });
+
+
+
 
 
 
