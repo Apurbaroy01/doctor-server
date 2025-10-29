@@ -192,7 +192,7 @@ module.exports = function (appointmentCollection) {
                         { name: { $regex: query, $options: "i" } },
                     ],
                 })
-                .limit(10)
+                .limit(4)
                 .toArray();
 
             res.json(patients);
