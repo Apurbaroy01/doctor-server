@@ -157,7 +157,7 @@ module.exports = function (appointmentCollection) {
 
     app.get("/patient", async (req, res) => {
         try {
-            const { trackingId } = req.query; 
+            const { trackingId } = req.query;
 
             if (!trackingId) {
                 return res.status(400).send({ message: "trackingId is required" });
@@ -165,8 +165,8 @@ module.exports = function (appointmentCollection) {
 
             const result = await appointmentCollection
                 .find({ trackingId })
-                .sort({ createdAt: -1 }) 
-                .toArray(); 
+                .sort({ createdAt: -1 })
+                .toArray();
 
             res.send(result);
         } catch (error) {
@@ -177,6 +177,30 @@ module.exports = function (appointmentCollection) {
 
 
 
+    // 🔹 সার্চ রাউট
+    app.get("/patients/search", async (req, res) => {
+        const query = req.query.q;
+        if (!query) return res.json([]);
+
+        try {
+            // আংশিক মিল খোঁজা (mobile বা patientId বা name)
+            const patients = await appointmentCollection
+                .find({
+                    $or: [
+                        { mobile: { $regex: query, $options: "i" } },
+                        { patientId: { $regex: query, $options: "i" } },
+                        { name: { $regex: query, $options: "i" } },
+                    ],
+                })
+                .limit(10)
+                .toArray();
+
+            res.json(patients);
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: err.message });
+        }
+    });
 
 
 
