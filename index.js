@@ -26,6 +26,7 @@ async function run() {
         console.log("✅ MongoDB Connected Successfully");
 
         const appointmentCollection = client.db("Doctor").collection("appointments");
+        const usersCollection = client.db("Doctor").collection("user");
 
         // Import Routes
         const appointmentRoutes = require("./routes/appointmentRoutes")(appointmentCollection);
@@ -34,24 +35,56 @@ async function run() {
 
 
 
-        // ✅ একক ইউজার তৈরি
+        // ✅ একক ইউজার তৈরি + MongoDB তে সেভ
         app.post("/admin/create-user", async (req, res) => {
             const { email, password } = req.body;
+            console.log(email, password)
             try {
+                // 1️⃣ Firebase-এ ইউজার তৈরি
                 const userRecord = await admin.auth().createUser({ email, password });
+
+                // 2️⃣ MongoDB তে ইউজার ইনসার্ট
+                const newUser = {
+                    uid: userRecord.uid,
+                    email: userRecord.email,
+                    createdAt: new Date(),
+                    role: "user", // চাইলে ডিফল্ট রোল দিতে পারো
+                };
+
+                await usersCollection.insertOne(newUser);
+
+                // 3️⃣ রেসপন্স পাঠানো
                 res.json({ success: true, user: userRecord });
             } catch (error) {
                 res.status(400).json({ success: false, error: error.message });
             }
         });
 
-        // ❌ ইউজার ডিলিট
+
+        // ❌ ইউজার ডিলিট (Firebase + MongoDB)
         app.delete("/admin/delete-user/:email", async (req, res) => {
             const { email } = req.params;
+
             try {
+                // 1️⃣ Firebase থেকে ইউজার খুঁজে বের করা
                 const user = await admin.auth().getUserByEmail(email);
+
+                // 2️⃣ Firebase থেকে ইউজার ডিলিট করা
                 await admin.auth().deleteUser(user.uid);
-                res.json({ success: true, message: `User ${email} deleted successfully` });
+
+                // 3️⃣ MongoDB থেকেও ইউজার ডিলিট করা
+                const result = await usersCollection.deleteOne({ email });
+
+                if (result.deletedCount === 0) {
+                    return res.json({
+                        success: true,
+                        message: `User deleted from Firebase, but not found in MongoDB.`,
+                    });
+                }
+
+                // 4️⃣ সব ঠিক থাকলে রেসপন্স পাঠানো
+                res.json({ success: true, message: `User ${email} deleted successfully from Firebase and MongoDB.` });
+
             } catch (error) {
                 res.status(400).json({ success: false, error: error.message });
             }
