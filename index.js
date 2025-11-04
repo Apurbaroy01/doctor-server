@@ -90,6 +90,39 @@ async function run() {
             }
         });
 
+        app.patch("/admin/toggle-user/:uid", async (req, res) => {
+            try {
+                const user = await admin.auth().getUser(req.params.uid);
+                const newStatus = !user.disabled;
+                await admin.auth().updateUser(req.params.uid, { disabled: newStatus });
+                res.json({
+                    success: true,
+                    message: newStatus
+                        ? `User ${user.email} has been deactivated.`
+                        : `User ${user.email} has been reactivated.`,
+                });
+            } catch (error) {
+                console.error("Toggle error:", error);
+                res.json({ success: false, error: error.message });
+            }
+        });
+
+
+
+
+        app.get("/admin/create-user", async (req, res) => {
+            try {
+                const result = await usersCollection.find().toArray();
+                res.send(result);
+            }
+            catch (err) {
+                res.status(400).send({ message: "internal server error" })
+            }
+        });
+
+
+
+
 
         app.get("/", (req, res) => {
             res.send("Doctor Server is Running 🚀");
