@@ -92,22 +92,37 @@ async function run() {
 
         app.patch("/admin/toggle-user/:uid", async (req, res) => {
             try {
-                const user = await admin.auth().getUser(req.params.uid);
-                const newStatus = !user.disabled;
-                await admin.auth().updateUser(req.params.uid, { disabled: newStatus });
+                const uid = req.params.uid;
+
+                // 1️⃣ Get the current Firebase user
+                const user = await admin.auth().getUser(uid);
+
+                // 2️⃣ Directly flip the disabled flag
+                const isDisabled = !user.disabled;
+
+                // 3️⃣ Update Firebase user
+                await admin.auth().updateUser(uid, { disabled: isDisabled });
+
+                // 4️⃣ Update MongoDB user’s active flag (true = enabled, false = disabled)
+                await usersCollection.updateOne(
+                    { uid },
+                    { $set: { active: !isDisabled } }
+                );
+
+                // 5️⃣ Send simple response
                 res.json({
                     success: true,
-                    message: newStatus
-                        ? `User ${user.email} has been deactivated.`
-                        : `User ${user.email} has been reactivated.`,
+                    message: isDisabled
+                        ? `User ${user.email} deactivated successfully.`
+                        : `User ${user.email} reactivated successfully.`,
+                    firebaseDisabled: isDisabled,
+                    mongoActive: !isDisabled,
                 });
             } catch (error) {
                 console.error("Toggle error:", error);
-                res.json({ success: false, error: error.message });
+                res.status(400).json({ success: false, error: error.message });
             }
         });
-
-
 
 
         app.get("/admin/create-user", async (req, res) => {
