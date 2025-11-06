@@ -138,15 +138,20 @@ module.exports = function (appointmentCollection) {
     // PATCH /appointments/:id
     app.patch("/appointments/:id", async (req, res) => {
         const { id } = req.params;
-        const { status } = req.body;
+        const { status, prescription } = req.body; // prescription destructure করো
 
-        const query = { _id: new ObjectId(id) }
+        const query = { _id: new ObjectId(id) };
         const updateDoc = {
-            $set: { status },
+            $set: {},
         };
-        const result = await appointmentCollection.updateOne(query, updateDoc)
-        res.send(result)
+
+        if (status) updateDoc.$set.status = status;
+        if (prescription) updateDoc.$set.prescription = prescription;
+
+        const result = await appointmentCollection.updateOne(query, updateDoc);
+        res.send(result);
     });
+
 
 
     app.get("/appointments/:id", async (req, res) => {
