@@ -33,6 +33,18 @@ async function run() {
         app.use("/", appointmentRoutes);
 
 
+        app.get("/doctors", async (req, res) => {
+            const email = req.query.email;
+            console.log(email);
+            const doctor = await usersCollection.findOne({ email: email });
+
+            if (!doctor) {
+                return res.status(404).send({ message: "Doctor not found" });
+            }
+
+            res.send(doctor);
+        });
+
 
 
         // ✅ একক ইউজার তৈরি + MongoDB তে সেভ

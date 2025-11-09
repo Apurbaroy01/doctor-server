@@ -129,8 +129,10 @@ module.exports = function (appointmentCollection) {
     });
 
 
-    app.get("/appointmentsList", async (req, res) => {
-        const result = await appointmentCollection.find().toArray();
+    app.get("/appointmentsList/:email", async (req, res) => {
+        const doctorEmail = req.params.email;
+        console.log(doctorEmail);
+        const result = await appointmentCollection.find({ doctorEmail }).toArray();
         res.send(result);
     });
 
