@@ -20,19 +20,28 @@ module.exports = function (appointmentCollection) {
         return mins;
     };
 
+    // ✅ GET: Fetch all appointments (filter by email/date/search/payment)
     app.get("/appointments", async (req, res) => {
         try {
-            let { date, q, payment } = req.query;
+            let { email, date, q, payment } = req.query;
 
-            // date না এলে আজকের তারিখ
-            if (!date) {
-                date = DateTime.now().setZone("Asia/Dhaka").toFormat("yyyy-MM-dd");
+            if (!email) {
+                return res.status(400).send({ message: "Email is required" });
             }
 
-            const query = { date };
+            // Default date = today
+            if (!date) {
+                date = DateTime.now()
+                    .setZone("Asia/Dhaka")
+                    .toFormat("yyyy-MM-dd");
+            }
 
-            if (q) {
-                const rx = { $regex: q, $options: "i" };
+            const query = { doctorEmail: email };
+            if (date) query.date = date;
+
+            // 🔍 optional search
+            if (q && q.trim()) {
+                const rx = { $regex: q.trim(), $options: "i" };
                 query.$or = [
                     { name: rx },
                     { trackingId: rx },
@@ -42,8 +51,9 @@ module.exports = function (appointmentCollection) {
                 ];
             }
 
-            if (payment) {
-                query.payment = { $regex: `^${payment}$`, $options: "i" }; // exact-ish match, case-insensitive
+            // 🔍 optional payment filter
+            if (payment && payment.trim()) {
+                query.payment = { $regex: `^${payment}$`, $options: "i" };
             }
 
             const docs = await appointmentCollection
@@ -51,9 +61,9 @@ module.exports = function (appointmentCollection) {
                 .sort({ date: 1, timeMinutes: 1, time: 1 })
                 .toArray();
 
-            res.send(docs);
+            res.status(200).send(docs);
         } catch (err) {
-            console.error("GET /appointments error:", err);
+            console.error("❌ GET /appointments error:", err);
             res.status(500).send({ message: "Failed to fetch appointments" });
         }
     });
@@ -62,9 +72,9 @@ module.exports = function (appointmentCollection) {
     app.post("/appointments", async (req, res) => {
         try {
             const body = req.body || {};
-            console.log(body)
+            console.log("📩 Incoming appointment:", body);
 
-            // validate time format
+            // ✅ Validate time format
             const timeMinutes = timeToMinutes(body.time);
             if (timeMinutes == null) {
                 return res
@@ -72,10 +82,11 @@ module.exports = function (appointmentCollection) {
                     .send({ message: "Invalid time format. Use like '10:20 AM'." });
             }
 
-            // check time clash for same date/time
+            // ✅ Check time clash for same date/time for same doctor
             const clash = await appointmentCollection.findOne({
                 date: body.date,
                 time: body.time,
+                doctorEmail: body.doctorEmail,
             });
             if (clash) {
                 return res
@@ -83,31 +94,31 @@ module.exports = function (appointmentCollection) {
                     .send({ message: "This time slot is already booked for the selected date." });
             }
 
-            // check if phone already exists
+            // ✅ Check if mobile already exists (same patient)
             let trackingId;
             const existingAppointment = await appointmentCollection.findOne({
-                phone: body.phone,
+                mobile: body.mobile,
             });
 
             if (existingAppointment) {
-                // reuse same trackingId
-                trackingId = existingAppointment.trackingId;
+                trackingId = existingAppointment.trackingId; // reuse old ID
             } else {
-                // create a new unique trackingId
                 trackingId = `TRK-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
             }
 
+            // ✅ Prepare final document
             const doc = {
                 ...body,
                 timeMinutes,
                 trackingId,
+                status: "Pending",
                 createdAt: new Date(),
             };
 
             const result = await appointmentCollection.insertOne(doc);
             res.send({ success: true, trackingId, insertedId: result.insertedId });
         } catch (err) {
-            console.error("POST /appointments error:", err);
+            console.error("❌ POST /appointments error:", err);
             if (err?.code === 11000) {
                 return res
                     .status(409)
@@ -116,6 +127,7 @@ module.exports = function (appointmentCollection) {
             res.status(500).send({ message: "Failed to create appointment" });
         }
     });
+
 
 
     app.delete("/appointments/:id", async (req, res) => {
@@ -184,15 +196,20 @@ module.exports = function (appointmentCollection) {
 
 
 
-    // 🔹 সার্চ রাউট
+    // 🔹 সার্চ রাউট (doctorEmail অনুযায়ী ফিল্টার সহ)
     app.get("/patients/search", async (req, res) => {
         const query = req.query.q;
-        if (!query) return res.json([]);
+        const doctorEmail = req.query.email; // doctorEmail query থেকে নিচ্ছি
+
+        if (!query || !doctorEmail) {
+            return res.json([]); // doctorEmail না থাকলে ডেটা রিটার্ন না করো
+        }
 
         try {
-            // আংশিক মিল খোঁজা (mobile বা patientId বা name)
+            // 🔹 আংশিক মিল খোঁজা (mobile, patientId, name)
             const patients = await appointmentCollection
                 .find({
+                    doctorEmail, // শুধু ঐ ডাক্তারের রেকর্ড
                     $or: [
                         { mobile: { $regex: query, $options: "i" } },
                         { patientId: { $regex: query, $options: "i" } },
@@ -204,10 +221,11 @@ module.exports = function (appointmentCollection) {
 
             res.json(patients);
         } catch (err) {
-            console.error(err);
+            console.error("❌ Error in /patients/search:", err);
             res.status(500).json({ error: err.message });
         }
     });
+
 
 
 
