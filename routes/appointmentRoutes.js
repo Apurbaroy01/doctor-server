@@ -98,6 +98,7 @@ module.exports = function (appointmentCollection) {
             let trackingId;
             const existingAppointment = await appointmentCollection.findOne({
                 mobile: body.mobile,
+                doctorEmail: body.doctorEmail,
             });
 
             if (existingAppointment) {
