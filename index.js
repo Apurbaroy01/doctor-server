@@ -26,11 +26,15 @@ async function run() {
         console.log("✅ MongoDB Connected Successfully");
 
         const appointmentCollection = client.db("Doctor").collection("appointments");
+        const scheduleCollection = client.db("Doctor").collection("schedules");
         const usersCollection = client.db("Doctor").collection("user");
 
         // Import Routes
         const appointmentRoutes = require("./routes/appointmentRoutes")(appointmentCollection);
         app.use("/", appointmentRoutes);
+
+        const scheduleRoute = require("./routes/scheduleRoute")(scheduleCollection);
+        app.use("/", scheduleRoute)
 
 
         app.get("/doctors", async (req, res) => {
