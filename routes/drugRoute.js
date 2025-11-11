@@ -13,13 +13,17 @@ module.exports = function (drugCollection) {
     });
 
     // ✅ Get all drugs
-    app.get("/drugs/", async (req, res) => {
-        const drugs = await drugCollection.find().sort({ name: 1 }).toArray();
-        res.send(drugs);
+    app.get("/drugs", async (req, res) => {
+        const doctorEmail = req.query.email;
+        if (doctorEmail) {
+            const drugs = await drugCollection.find({ doctorEmail: doctorEmail }).sort({ name: 1 }).toArray();
+            return res.send(drugs);
+        }
+        
     });
 
     // ✅ Search drugs by name
-    app.get("/api/drugs/search", async (req, res) => {
+    app.get("/drugs/search", async (req, res) => {
         const q = req.query.q || "";
         const drugs = await drugCollection
             .find({ name: { $regex: q, $options: "i" } })
