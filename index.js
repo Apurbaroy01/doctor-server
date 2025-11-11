@@ -28,6 +28,7 @@ async function run() {
         const appointmentCollection = client.db("Doctor").collection("appointments");
         const scheduleCollection = client.db("Doctor").collection("schedules");
         const usersCollection = client.db("Doctor").collection("user");
+        const drugCollection = client.db("Doctor").collection("drugs");
 
         // Import Routes
         const appointmentRoutes = require("./routes/appointmentRoutes")(appointmentCollection);
@@ -36,7 +37,12 @@ async function run() {
         const scheduleRoute = require("./routes/scheduleRoute")(scheduleCollection);
         app.use("/", scheduleRoute)
 
+        const drugRoute = require("./routes/drugRoute")(drugCollection);
+        app.use("/", drugRoute);
 
+
+
+        // ✅ Get doctor by email
         app.get("/doctors", async (req, res) => {
             const email = req.query.email;
             console.log(email);
