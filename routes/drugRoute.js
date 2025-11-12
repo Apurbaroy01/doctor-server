@@ -24,9 +24,10 @@ module.exports = function (drugCollection) {
 
     // ✅ Search drugs by name
     app.get("/drugs/search", async (req, res) => {
+        const doctorEmail = req.query.email;
         const q = req.query.q || "";
         const drugs = await drugCollection
-            .find({ name: { $regex: q, $options: "i" } })
+            .find({ name: { $regex: q, $options: "i" }, doctorEmail: doctorEmail })
             .limit(4)
             .toArray();
         res.send(drugs);
