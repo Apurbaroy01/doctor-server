@@ -27,7 +27,7 @@ module.exports = function (drugCollection) {
         const q = req.query.q || "";
         const drugs = await drugCollection
             .find({ name: { $regex: q, $options: "i" } })
-            .limit(10)
+            .limit(4)
             .toArray();
         res.send(drugs);
     });
