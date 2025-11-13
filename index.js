@@ -29,6 +29,7 @@ async function run() {
         const scheduleCollection = client.db("Doctor").collection("schedules");
         const usersCollection = client.db("Doctor").collection("user");
         const drugCollection = client.db("Doctor").collection("drugs");
+        const testCollection = client.db("Doctor").collection("tests");
 
         // Import Routes
         const appointmentRoutes = require("./routes/appointmentRoutes")(appointmentCollection);
@@ -39,6 +40,9 @@ async function run() {
 
         const drugRoute = require("./routes/drugRoute")(drugCollection);
         app.use("/", drugRoute);
+
+        const testRoute = require("./routes/testRoute")(testCollection);
+        app.use("/", testRoute);
 
 
 
