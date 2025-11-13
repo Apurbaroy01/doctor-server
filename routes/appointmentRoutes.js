@@ -227,7 +227,15 @@ module.exports = function (appointmentCollection) {
         }
     });
 
-
+    // ✅ Get all payments
+    app.get("/payments", async (req, res) => {
+        const doctorEmail = req.query.email;
+        if (doctorEmail) {
+            const drugs = await appointmentCollection.find({ doctorEmail: doctorEmail }).sort({ name: 1 }).toArray();
+            return res.send(drugs);
+        }
+        
+    });
 
 
 
