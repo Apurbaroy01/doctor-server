@@ -82,6 +82,18 @@ async function run() {
         };
 
 
+        // ✅ Get doctor
+        app.get("/alldoctors", async (req, res) => {
+            
+            const result = await usersCollection.find().toArray();
+            if (!result) {
+                return res.status(404).send({ message: "Doctor not found" });
+            }
+
+            res.send(result);
+        });
+
+
         // ✅ Get doctor by email
         app.get("/doctors", async (req, res) => {
             const email = req.query.email;
