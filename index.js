@@ -46,10 +46,46 @@ async function run() {
 
 
 
+        // custom middleware verify firebase token
+
+        const verifyFBToken = async (req, res, next) => {
+            const authHeader = req.headers.authorization;
+            if (!authHeader) {
+                return res.status(401).send({ message: 'Unauthorized access' });
+            }
+            const token = authHeader.split(' ')[1];
+            if (!token) {
+                return res.status(401).send({ message: 'Unauthorized access' });
+            }
+            console.log("Token:", token);
+
+            // verify token---
+            try {
+                const decoded = await admin.auth().verifyIdToken(token)
+                req.decoded = decoded;
+                next();
+            }
+            catch (error) {
+                return res.status(401).send({ messagr: "unathorized access" })
+            }
+        };
+
+
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email }
+            const user = await usersCollection.findOne(query)
+            if (user?.role !== "user") {
+                return res.status(403).send({ message: "forbidden access" })
+            }
+            next();
+        };
+
+
         // ✅ Get doctor by email
         app.get("/doctors", async (req, res) => {
             const email = req.query.email;
-            console.log(email);
+
             const doctor = await usersCollection.findOne({ email: email });
 
             if (!doctor) {
@@ -62,7 +98,7 @@ async function run() {
 
 
         // ✅ একক ইউজার তৈরি + MongoDB তে সেভ
-        app.post("/admin/create-user", async (req, res) => {
+        app.post("/admin/create-user",verifyFBToken,verifyAdmin, async (req, res) => {
             const { email, password } = req.body;
             console.log(email, password)
             try {
