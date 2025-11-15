@@ -75,7 +75,7 @@ async function run() {
             const email = req.decoded.email;
             const query = { email }
             const user = await usersCollection.findOne(query)
-            if (user?.role !== "user") {
+            if (user?.role !== "AdminUser") {
                 return res.status(403).send({ message: "forbidden access" })
             }
             next();
@@ -84,7 +84,7 @@ async function run() {
 
         // ✅ Get doctor
         app.get("/alldoctors", async (req, res) => {
-            
+
             const result = await usersCollection.find().toArray();
             if (!result) {
                 return res.status(404).send({ message: "Doctor not found" });
@@ -109,8 +109,8 @@ async function run() {
 
 
 
-        // ✅ একক ইউজার তৈরি + MongoDB তে সেভ
-        app.post("/admin/create-user",verifyFBToken,verifyAdmin, async (req, res) => {
+        // ✅ Admin একক ইউজার তৈরি + MongoDB তে সেভ
+        app.post("/admin/create-user", verifyFBToken, async (req, res) => {
             const { email, password } = req.body;
             console.log(email, password)
             try {
@@ -122,17 +122,60 @@ async function run() {
                     uid: userRecord.uid,
                     email: userRecord.email,
                     createdAt: new Date(),
-                    role: "user", // চাইলে ডিফল্ট রোল দিতে পারো
+                    role: "AdminUser", 
                 };
 
                 await usersCollection.insertOne(newUser);
 
-                // 3️⃣ রেসপন্স পাঠানো
+              
                 res.json({ success: true, user: userRecord });
             } catch (error) {
                 res.status(400).json({ success: false, error: error.message });
             }
         });
+
+        // ✅ Doctor একক ইউজার তৈরি + MongoDB তে সেভ
+        app.post("/doctor/create-user", verifyFBToken, verifyAdmin, async (req, res) => {
+            const { email, password } = req.body;
+            console.log(email, password)
+            try {
+                // 1️⃣ Firebase-এ ইউজার তৈরি
+                const userRecord = await admin.auth().createUser({ email, password });
+
+                // 2️⃣ MongoDB তে ইউজার ইনসার্ট
+                const newUser = {
+                    uid: userRecord.uid,
+                    email: userRecord.email,
+                    createdAt: new Date(),
+                    role: "DoctorUser",
+                };
+
+                await usersCollection.insertOne(newUser);
+
+               
+                res.json({ success: true, user: userRecord });
+            } catch (error) {
+                res.status(400).json({ success: false, error: error.message });
+            }
+        });
+
+        // ✅ ইউজারের রোল চেক করা
+        app.get('/users/:email/role', async (req, res) => {
+            try {
+                const email = req.params.email;
+                const user = await usersCollection.findOne({ email });
+
+                if (!user) {
+                    return res.status(404).send({ message: 'User not found', role: 'user' });
+                }
+
+                res.send({ role: user.role || 'user' });
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: 'Server error' });
+            }
+        });
+
 
 
         // ❌ ইউজার ডিলিট (Firebase + MongoDB)
