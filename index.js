@@ -264,10 +264,6 @@ async function run() {
             }
         });
 
-
-
-
-
         app.get("/", (req, res) => {
             res.send("Doctor Server is Running 🚀");
         });
