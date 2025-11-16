@@ -84,8 +84,9 @@ async function run() {
 
         // ✅ Get doctor
         app.get("/alldoctors", async (req, res) => {
-
-            const result = await usersCollection.find().toArray();
+            const role = "DoctorUser";
+            const query = { role: role };
+            const result = await usersCollection.find(query).toArray();
             if (!result) {
                 return res.status(404).send({ message: "Doctor not found" });
             }
@@ -241,10 +242,21 @@ async function run() {
             }
         });
 
+        // ✅ Get all DoctorUser users
+        app.get("/doctor/create-user", async (req, res) => {
+            try {
+                const result = await usersCollection.find({role:"DoctorUser"}).toArray();
+                res.send(result);
+            }
+            catch (err) {
+                res.status(400).send({ message: "internal server error" })
+            }
+        });
 
+        // ✅ Get all AdminUser users
         app.get("/admin/create-user", async (req, res) => {
             try {
-                const result = await usersCollection.find().toArray();
+                const result = await usersCollection.find({role:"AdminUser"}).toArray();
                 res.send(result);
             }
             catch (err) {
