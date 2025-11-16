@@ -30,6 +30,7 @@ async function run() {
         const usersCollection = client.db("Doctor").collection("user");
         const drugCollection = client.db("Doctor").collection("drugs");
         const testCollection = client.db("Doctor").collection("tests");
+        const noticeCollection = client.db("Doctor").collection("notices");
 
         // Import Routes
         const appointmentRoutes = require("./routes/appointmentRoutes")(appointmentCollection);
@@ -43,6 +44,9 @@ async function run() {
 
         const testRoute = require("./routes/testRoute")(testCollection);
         app.use("/", testRoute);
+
+        const noticeRoute = require("./routes/noticeRoute")(noticeCollection);
+        app.use("/", noticeRoute);
 
 
 
@@ -263,6 +267,13 @@ async function run() {
                 res.status(400).send({ message: "internal server error" })
             }
         });
+
+        
+
+
+
+
+
 
         app.get("/", (req, res) => {
             res.send("Doctor Server is Running 🚀");
