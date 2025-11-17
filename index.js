@@ -31,6 +31,7 @@ async function run() {
         const drugCollection = client.db("Doctor").collection("drugs");
         const testCollection = client.db("Doctor").collection("tests");
         const noticeCollection = client.db("Doctor").collection("notices");
+        const headlineCollection = client.db("Doctor").collection("heddings");
 
         // Import Routes
         const appointmentRoutes = require("./routes/appointmentRoutes")(appointmentCollection);
@@ -45,7 +46,7 @@ async function run() {
         const testRoute = require("./routes/testRoute")(testCollection);
         app.use("/", testRoute);
 
-        const noticeRoute = require("./routes/noticeRoute")(noticeCollection);
+        const noticeRoute = require("./routes/noticeRoute")(noticeCollection,headlineCollection);
         app.use("/", noticeRoute);
 
 
