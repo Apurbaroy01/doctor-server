@@ -150,22 +150,39 @@ module.exports = function (appointmentCollection) {
     });
 
 
+    // // PATCH /appointments/:id
+    // app.patch("/appointments/:id", async (req, res) => {
+    //     const { id } = req.params;
+    //     const { status, prescription } = req.body; // prescription destructure করো
+
+    //     const query = { _id: new ObjectId(id) };
+    //     const updateDoc = {
+    //         $set: {},
+    //     };
+
+    //     if (status) updateDoc.$set.status = status;
+    //     if (prescription) updateDoc.$set.prescription = prescription;
+
+    //     const result = await appointmentCollection.updateOne(query, updateDoc);
+    //     res.send(result);
+    // });
+
+
     // PATCH /appointments/:id
-    app.patch("/appointments/:id", async (req, res) => {
-        const { id } = req.params;
-        const { status, prescription } = req.body; // prescription destructure করো
+app.patch("/appointments/:id", async (req, res) => {
+    const { id } = req.params;
+    const updateData = req.body;
 
-        const query = { _id: new ObjectId(id) };
-        const updateDoc = {
-            $set: {},
-        };
+    const query = { _id: new ObjectId(id) };
 
-        if (status) updateDoc.$set.status = status;
-        if (prescription) updateDoc.$set.prescription = prescription;
+    const updateDoc = {
+        $set: updateData,  // body তে যা থাকবে সব আপডেট হবে
+    };
 
-        const result = await appointmentCollection.updateOne(query, updateDoc);
-        res.send(result);
-    });
+    const result = await appointmentCollection.updateOne(query, updateDoc);
+    res.send(result);
+});
+
 
 
 
@@ -200,14 +217,14 @@ module.exports = function (appointmentCollection) {
     // 🔹 সার্চ রাউট (doctorEmail অনুযায়ী ফিল্টার সহ)
     app.get("/patients/search", async (req, res) => {
         const query = req.query.q;
-        const doctorEmail = req.query.email; // doctorEmail query থেকে নিচ্ছি
+        const doctorEmail = req.query.email;
 
         if (!query || !doctorEmail) {
-            return res.json([]); // doctorEmail না থাকলে ডেটা রিটার্ন না করো
+            return res.json([]); 
         }
 
         try {
-            // 🔹 আংশিক মিল খোঁজা (mobile, patientId, name)
+           
             const patients = await appointmentCollection
                 .find({
                     doctorEmail, // শুধু ঐ ডাক্তারের রেকর্ড
