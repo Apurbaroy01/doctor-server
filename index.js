@@ -38,7 +38,7 @@ async function run() {
         app.use("/", appointmentRoutes);
 
         const scheduleRoute = require("./routes/scheduleRoute")(scheduleCollection);
-        app.use("/", scheduleRoute)
+        app.use("/", scheduleRoute);
 
         const drugRoute = require("./routes/drugRoute")(drugCollection);
         app.use("/", drugRoute);
@@ -46,13 +46,12 @@ async function run() {
         const testRoute = require("./routes/testRoute")(testCollection);
         app.use("/", testRoute);
 
-        const noticeRoute = require("./routes/noticeRoute")(noticeCollection,headlineCollection);
+        const noticeRoute = require("./routes/noticeRoute")(noticeCollection, headlineCollection);
         app.use("/", noticeRoute);
 
-
-
-        // custom middleware verify firebase token
-
+        // -------------------------------
+        // 🔐 Firebase Token Verification
+        // -------------------------------
         const verifyFBToken = async (req, res, next) => {
             const authHeader = req.headers.authorization;
             if (!authHeader) {
@@ -62,49 +61,40 @@ async function run() {
             if (!token) {
                 return res.status(401).send({ message: 'Unauthorized access' });
             }
-            console.log("Token:", token);
 
-            // verify token---
             try {
-                const decoded = await admin.auth().verifyIdToken(token)
+                const decoded = await admin.auth().verifyIdToken(token);
                 req.decoded = decoded;
                 next();
-            }
-            catch (error) {
-                return res.status(401).send({ messagr: "unathorized access" })
+            } catch (error) {
+                return res.status(401).send({ message: "Unauthorized access" });
             }
         };
 
-
         const verifyAdmin = async (req, res, next) => {
             const email = req.decoded.email;
-            const query = { email }
-            const user = await usersCollection.findOne(query)
+            const user = await usersCollection.findOne({ email });
+
             if (user?.role !== "AdminUser") {
-                return res.status(403).send({ message: "forbidden access" })
+                return res.status(403).send({ message: "Forbidden access" });
             }
             next();
         };
 
-
-        // ✅ Get doctor
+        // -----------------------------------------
+        // 🟦 Doctor List API (By Role)
+        // -----------------------------------------
         app.get("/alldoctors", async (req, res) => {
-            const role = "DoctorUser";
-            const query = { role: role };
-            const result = await usersCollection.find(query).toArray();
-            if (!result) {
-                return res.status(404).send({ message: "Doctor not found" });
-            }
-
+            const result = await usersCollection.find({ role: "DoctorUser" }).toArray();
             res.send(result);
         });
 
-
-        // ✅ Get doctor by email
+        // -----------------------------------------
+        // 🟦 Get doctor by email
+        // -----------------------------------------
         app.get("/doctors", async (req, res) => {
             const email = req.query.email;
-
-            const doctor = await usersCollection.findOne({ email: email });
+            const doctor = await usersCollection.findOne({ email });
 
             if (!doctor) {
                 return res.status(404).send({ message: "Doctor not found" });
@@ -113,176 +103,198 @@ async function run() {
             res.send(doctor);
         });
 
-
-
-        // ✅ Admin একক ইউজার তৈরি + MongoDB তে সেভ
+        // -----------------------------------------
+        // 👑 Admin User Creation
+        // -----------------------------------------
         app.post("/admin/create-user", verifyFBToken, async (req, res) => {
             const { email, password } = req.body;
-            console.log(email, password)
+
             try {
-                // 1️⃣ Firebase-এ ইউজার তৈরি
                 const userRecord = await admin.auth().createUser({ email, password });
 
-                // 2️⃣ MongoDB তে ইউজার ইনসার্ট
                 const newUser = {
                     uid: userRecord.uid,
                     email: userRecord.email,
                     createdAt: new Date(),
-                    role: "AdminUser", 
+                    role: "AdminUser",
                 };
 
                 await usersCollection.insertOne(newUser);
 
-              
                 res.json({ success: true, user: userRecord });
             } catch (error) {
                 res.status(400).json({ success: false, error: error.message });
             }
         });
 
-        // ✅ Doctor একক ইউজার তৈরি + MongoDB তে সেভ
+        // -----------------------------------------
+        // 👨‍⚕️ Doctor User Creation (Default active + expiryDate)
+        // -----------------------------------------
         app.post("/doctor/create-user", verifyFBToken, verifyAdmin, async (req, res) => {
             const { email, password } = req.body;
-            console.log(email, password)
+
             try {
-                // 1️⃣ Firebase-এ ইউজার তৈরি
                 const userRecord = await admin.auth().createUser({ email, password });
 
-                // 2️⃣ MongoDB তে ইউজার ইনসার্ট
                 const newUser = {
                     uid: userRecord.uid,
                     email: userRecord.email,
                     createdAt: new Date(),
                     role: "DoctorUser",
+                    active: true,
+                    expiryDate: null, // ⬅️ Custom expiry default
                 };
 
                 await usersCollection.insertOne(newUser);
 
-               
-                res.json({ success: true, user: userRecord });
+                res.json({ success: true, user: newUser });
             } catch (error) {
                 res.status(400).json({ success: false, error: error.message });
             }
         });
 
-        // ✅ ইউজারের রোল চেক করা
+        // -----------------------------------------
+        // 🟪 Get User Role
+        // -----------------------------------------
         app.get('/users/:email/role', async (req, res) => {
-            try {
-                const email = req.params.email;
-                const user = await usersCollection.findOne({ email });
+            const email = req.params.email;
+            const user = await usersCollection.findOne({ email });
 
-                if (!user) {
-                    return res.status(404).send({ message: 'User not found', role: 'user' });
-                }
-
-                res.send({ role: user.role || 'user' });
-            } catch (error) {
-                console.error(error);
-                res.status(500).send({ message: 'Server error' });
+            if (!user) {
+                return res.status(404).send({ message: 'User not found', role: 'user' });
             }
+
+            res.send({ role: user.role || 'user' });
         });
 
-
-
-        // ❌ ইউজার ডিলিট (Firebase + MongoDB)
+        // -----------------------------------------
+        // ❌ Delete User (Firebase + MongoDB)
+        // -----------------------------------------
         app.delete("/admin/delete-user/:email", async (req, res) => {
             const { email } = req.params;
 
             try {
-                // 1️⃣ Firebase থেকে ইউজার খুঁজে বের করা
                 const user = await admin.auth().getUserByEmail(email);
 
-                // 2️⃣ Firebase থেকে ইউজার ডিলিট করা
                 await admin.auth().deleteUser(user.uid);
-
-                // 3️⃣ MongoDB থেকেও ইউজার ডিলিট করা
                 const result = await usersCollection.deleteOne({ email });
 
-                if (result.deletedCount === 0) {
-                    return res.json({
-                        success: true,
-                        message: `User deleted from Firebase, but not found in MongoDB.`,
-                    });
-                }
-
-                // 4️⃣ সব ঠিক থাকলে রেসপন্স পাঠানো
-                res.json({ success: true, message: `User ${email} deleted successfully from Firebase and MongoDB.` });
+                res.json({ success: true, message: `User ${email} deleted successfully.` });
 
             } catch (error) {
                 res.status(400).json({ success: false, error: error.message });
             }
         });
 
+        // -----------------------------------------
+        // 🔄 Toggle User Active/Disabled
+        // -----------------------------------------
         app.patch("/admin/toggle-user/:uid", async (req, res) => {
             try {
                 const uid = req.params.uid;
 
-                // 1️⃣ Get the current Firebase user
                 const user = await admin.auth().getUser(uid);
-
-                // 2️⃣ Directly flip the disabled flag
                 const isDisabled = !user.disabled;
 
-                // 3️⃣ Update Firebase user
                 await admin.auth().updateUser(uid, { disabled: isDisabled });
 
-                // 4️⃣ Update MongoDB user’s active flag (true = enabled, false = disabled)
                 await usersCollection.updateOne(
                     { uid },
                     { $set: { active: !isDisabled } }
                 );
 
-                // 5️⃣ Send simple response
                 res.json({
                     success: true,
                     message: isDisabled
-                        ? `User ${user.email} deactivated successfully.`
-                        : `User ${user.email} reactivated successfully.`,
-                    firebaseDisabled: isDisabled,
-                    mongoActive: !isDisabled,
+                        ? `User ${user.email} deactivated.`
+                        : `User ${user.email} activated.`,
                 });
             } catch (error) {
-                console.error("Toggle error:", error);
                 res.status(400).json({ success: false, error: error.message });
             }
         });
 
-        // ✅ Get all DoctorUser users
+        // -----------------------------------------
+        // 🟩 SET CUSTOM EXPIRY DATE API
+        // -----------------------------------------
+        app.patch("/admin/set-expiry/:uid", async (req, res) => {
+            const { uid } = req.params;
+            const { customDate } = req.body;
+
+            try {
+                await usersCollection.updateOne(
+                    { uid },
+                    { $set: { expiryDate: new Date(customDate) } }
+                );
+
+                res.json({ success: true, message: "Expiry date updated." });
+
+            } catch (error) {
+                res.json({ success: false, error: error.message });
+            }
+        });
+
+        // -----------------------------------------
+        // 🟧 Get Doctor Users + Auto Disable Expired Users
+        // -----------------------------------------
         app.get("/doctor/create-user", async (req, res) => {
             try {
-                const result = await usersCollection.find({role:"DoctorUser"}).toArray();
-                res.send(result);
-            }
-            catch (err) {
-                res.status(400).send({ message: "internal server error" })
+                const users = await usersCollection.find({ role: "DoctorUser" }).toArray();
+                const now = new Date();
+
+                for (let user of users) {
+                    if (user.expiryDate && now > new Date(user.expiryDate)) {
+                        // Disable in Firebase
+                        // await admin.auth().updateUser(user.uid, { disabled: true });
+
+                        // Disable in MongoDB
+                        await usersCollection.updateOne(
+                            { uid: user.uid },
+                            { $set: { active: false } }
+                        );
+
+                        user.active = false;
+                    }
+
+                    else if (user.expiryDate && now <= new Date(user.expiryDate)) {
+                        // Enable in Firebase
+                        // await admin.auth().updateUser(user.uid, { disabled: false });
+                        // Enable in MongoDB
+                        await usersCollection.updateOne(
+                            { uid: user.uid },
+                            { $set: { active: true } }
+                        );
+                        user.active = true;
+                    }
+                }
+
+                const updatedUsers = await usersCollection.find({ role: "DoctorUser" }).toArray();
+                res.json(updatedUsers);
+
+            } catch (err) {
+                res.status(400).send({ message: "internal server error" });
             }
         });
 
-        // ✅ Get all AdminUser users
+        // -----------------------------------------
+        // 🟥 Get Admin Users
+        // -----------------------------------------
         app.get("/admin/create-user", async (req, res) => {
-            try {
-                const result = await usersCollection.find({role:"AdminUser"}).toArray();
-                res.send(result);
-            }
-            catch (err) {
-                res.status(400).send({ message: "internal server error" })
-            }
+            const users = await usersCollection.find({ role: "AdminUser" }).toArray();
+            res.send(users);
         });
 
-        
-
-
-
-
-
-
+        // -----------------------------------------
+        // Default Root
+        // -----------------------------------------
         app.get("/", (req, res) => {
             res.send("Doctor Server is Running 🚀");
         });
 
         app.listen(port, () => {
-            console.log(`Server is running on port ${port}`);
+            console.log(`Server running on port ${port}`);
         });
+
     } catch (error) {
         console.error("❌ MongoDB Connection Error:", error.message);
     }
