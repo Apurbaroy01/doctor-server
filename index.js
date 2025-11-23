@@ -157,12 +157,14 @@ async function run() {
         // 👨‍⚕️ Doctor Assistant Creation (Default active )
         // -----------------------------------------
         app.post("/assistant/create-user", verifyFBToken,  async (req, res) => {
-            const { email, password } = req.body;
+            const { email, password,doctorId,doctorEmail } = req.body;
 
             try {
                 const userRecord = await admin.auth().createUser({ email, password });
 
                 const newUser = {
+                    doctorId,
+                    doctorEmail,
                     uid: userRecord.uid,
                     email: userRecord.email,
                     createdAt: new Date(),
