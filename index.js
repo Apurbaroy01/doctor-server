@@ -154,6 +154,31 @@ async function run() {
         });
 
         // -----------------------------------------
+        // 👨‍⚕️ Doctor Assistant Creation (Default active )
+        // -----------------------------------------
+        app.post("/assistant/create-user", verifyFBToken,  async (req, res) => {
+            const { email, password } = req.body;
+
+            try {
+                const userRecord = await admin.auth().createUser({ email, password });
+
+                const newUser = {
+                    uid: userRecord.uid,
+                    email: userRecord.email,
+                    createdAt: new Date(),
+                    role: "AssistantUser",
+                    active: true,
+                };
+
+                await usersCollection.insertOne(newUser);
+
+                res.json({ success: true, user: newUser });
+            } catch (error) {
+                res.status(400).json({ success: false, error: error.message });
+            }
+        });
+
+        // -----------------------------------------
         // 🟪 Get User Role
         // -----------------------------------------
         app.get('/users/:email/role', async (req, res) => {
@@ -281,6 +306,14 @@ async function run() {
         // -----------------------------------------
         app.get("/admin/create-user", async (req, res) => {
             const users = await usersCollection.find({ role: "AdminUser" }).toArray();
+            res.send(users);
+        });
+
+        // -----------------------------------------
+        // 🟥 Get assistant Users
+        // -----------------------------------------
+        app.get("/assistant/create-user", async (req, res) => {
+            const users = await usersCollection.find({ role: "AssistantUser" }).toArray();
             res.send(users);
         });
 
