@@ -156,12 +156,21 @@ async function run() {
         // -----------------------------------------
         // 👨‍⚕️ Doctor Assistant Creation (Default active )
         // -----------------------------------------
-        app.post("/assistant/create-user", verifyFBToken,  async (req, res) => {
-            const { email, password,doctorId,doctorEmail } = req.body;
+        app.post("/assistant/create-user", verifyFBToken, async (req, res) => {
+            const { email, password, doctorId, doctorEmail } = req.body;
 
             try {
+                // 1️⃣ Create Firebase Auth user
                 const userRecord = await admin.auth().createUser({ email, password });
 
+                // 2️⃣ Set Custom Claims (role, doctorId, doctorEmail)
+                await admin.auth().setCustomUserClaims(userRecord.uid, {
+                    role: "AssistantUser",
+                    doctorId: doctorId,
+                    doctorEmail: doctorEmail,
+                });
+
+                // 3️⃣ Save to MongoDB
                 const newUser = {
                     doctorId,
                     doctorEmail,
@@ -176,9 +185,11 @@ async function run() {
 
                 res.json({ success: true, user: newUser });
             } catch (error) {
+                console.error("❌ Assistant create error:", error);
                 res.status(400).json({ success: false, error: error.message });
             }
         });
+
 
         // -----------------------------------------
         // 🟪 Get User Role
