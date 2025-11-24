@@ -69,6 +69,55 @@ module.exports = function (appointmentCollection) {
     });
 
 
+    // ✅ GET: Fetch Assistant all appointments (filter by email/date/search/payment)
+    app.get("/assistantAppointments", async (req, res) => {
+        try {
+            let { email, date, q, payment } = req.query;
+
+            if (!email) {
+                return res.status(400).send({ message: "Email is required" });
+            }
+
+            // Default date = today
+            if (!date) {
+                date = DateTime.now()
+                    .setZone("Asia/Dhaka")
+                    .toFormat("yyyy-MM-dd");
+            }
+
+            const query = { assistantEmail: email };
+            if (date) query.date = date;
+
+            // 🔍 optional search
+            if (q && q.trim()) {
+                const rx = { $regex: q.trim(), $options: "i" };
+                query.$or = [
+                    { name: rx },
+                    { trackingId: rx },
+                    { mobile: rx },
+                    { address: rx },
+                    { payment: rx },
+                ];
+            }
+
+            // 🔍 optional payment filter
+            if (payment && payment.trim()) {
+                query.payment = { $regex: `^${payment}$`, $options: "i" };
+            }
+
+            const docs = await appointmentCollection
+                .find(query)
+                .sort({ date: 1, timeMinutes: 1, time: 1 })
+                .toArray();
+
+            res.status(200).send(docs);
+        } catch (err) {
+            console.error("❌ GET /appointments error:", err);
+            res.status(500).send({ message: "Failed to fetch appointments" });
+        }
+    });
+
+
     app.post("/appointments", async (req, res) => {
         try {
             const body = req.body || {};
