@@ -24,6 +24,7 @@ module.exports = function (appointmentCollection) {
     app.get("/appointments", async (req, res) => {
         try {
             let { email, date, q, payment } = req.query;
+            console.log(email)
 
             if (!email) {
                 return res.status(400).send({ message: "Email is required" });
@@ -36,7 +37,12 @@ module.exports = function (appointmentCollection) {
                     .toFormat("yyyy-MM-dd");
             }
 
-            const query = { doctorEmail: email };
+            const query = {
+                $or: [
+                    { doctorEmail: email },
+                    { assistantEmail: email },
+                ]
+            };
             if (date) query.date = date;
 
             // 🔍 optional search
@@ -218,19 +224,19 @@ module.exports = function (appointmentCollection) {
 
 
     // PATCH /appointments/:id
-app.patch("/appointments/:id", async (req, res) => {
-    const { id } = req.params;
-    const updateData = req.body;
+    app.patch("/appointments/:id", async (req, res) => {
+        const { id } = req.params;
+        const updateData = req.body;
 
-    const query = { _id: new ObjectId(id) };
+        const query = { _id: new ObjectId(id) };
 
-    const updateDoc = {
-        $set: updateData,  // body তে যা থাকবে সব আপডেট হবে
-    };
+        const updateDoc = {
+            $set: updateData,  // body তে যা থাকবে সব আপডেট হবে
+        };
 
-    const result = await appointmentCollection.updateOne(query, updateDoc);
-    res.send(result);
-});
+        const result = await appointmentCollection.updateOne(query, updateDoc);
+        res.send(result);
+    });
 
 
 
@@ -269,11 +275,11 @@ app.patch("/appointments/:id", async (req, res) => {
         const doctorEmail = req.query.email;
 
         if (!query || !doctorEmail) {
-            return res.json([]); 
+            return res.json([]);
         }
 
         try {
-           
+
             const patients = await appointmentCollection
                 .find({
                     doctorEmail, // শুধু ঐ ডাক্তারের রেকর্ড
@@ -300,7 +306,16 @@ app.patch("/appointments/:id", async (req, res) => {
             const drugs = await appointmentCollection.find({ doctorEmail: doctorEmail }).sort({ name: 1 }).toArray();
             return res.send(drugs);
         }
-        
+
+    });
+    // ✅ Get all payments
+    app.get("/assistant/payments", async (req, res) => {
+        const assistantEmail = req.query.email;
+        if (assistantEmail) {
+            const drugs = await appointmentCollection.find({ assistantEmail: assistantEmail }).sort({ name: 1 }).toArray();
+            return res.send(drugs);
+        }
+
     });
 
 

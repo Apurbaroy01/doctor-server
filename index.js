@@ -326,7 +326,8 @@ async function run() {
         // 🟥 Get assistant Users
         // -----------------------------------------
         app.get("/assistant/create-user", async (req, res) => {
-            const users = await usersCollection.find({ role: "AssistantUser" }).toArray();
+            const doctorEmail = req.query.doctorEmail;
+            const users = await usersCollection.find({ role: "AssistantUser", doctorEmail }).toArray();
             res.send(users);
         });
 
