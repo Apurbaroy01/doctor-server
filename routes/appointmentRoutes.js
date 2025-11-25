@@ -302,8 +302,15 @@ module.exports = function (appointmentCollection) {
     // ✅ Get all payments
     app.get("/payments", async (req, res) => {
         const doctorEmail = req.query.email;
+        const query = {
+            $or: [
+                { doctorEmail: doctorEmail },
+                { assistantEmail: doctorEmail },
+            ]
+        };
+
         if (doctorEmail) {
-            const drugs = await appointmentCollection.find({ doctorEmail: doctorEmail }).sort({ name: 1 }).toArray();
+            const drugs = await appointmentCollection.find(query).sort({ name: 1 }).toArray();
             return res.send(drugs);
         }
 
