@@ -199,28 +199,15 @@ module.exports = function (appointmentCollection) {
 
     app.get("/appointmentsList/:email", async (req, res) => {
         const doctorEmail = req.params.email;
-        console.log(doctorEmail);
-        const result = await appointmentCollection.find({ doctorEmail }).toArray();
+        const query = {
+            $or: [
+                { doctorEmail: doctorEmail },
+                { assistantEmail: doctorEmail },
+            ]
+        };
+        const result = await appointmentCollection.find(query).toArray();
         res.send(result);
     });
-
-
-    // // PATCH /appointments/:id
-    // app.patch("/appointments/:id", async (req, res) => {
-    //     const { id } = req.params;
-    //     const { status, prescription } = req.body; // prescription destructure করো
-
-    //     const query = { _id: new ObjectId(id) };
-    //     const updateDoc = {
-    //         $set: {},
-    //     };
-
-    //     if (status) updateDoc.$set.status = status;
-    //     if (prescription) updateDoc.$set.prescription = prescription;
-
-    //     const result = await appointmentCollection.updateOne(query, updateDoc);
-    //     res.send(result);
-    // });
 
 
     // PATCH /appointments/:id
