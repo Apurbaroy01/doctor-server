@@ -14,6 +14,7 @@ admin.initializeApp({
 app.use(cors());
 app.use(express.json());
 
+
 // MongoDB Connection
 const uri = "mongodb+srv://doctor12:doctor12@cluster0.4gy1j38.mongodb.net/?appName=Cluster0";
 const client = new MongoClient(uri, {
@@ -24,30 +25,6 @@ async function run() {
     try {
         await client.connect();
         console.log("✅ MongoDB Connected Successfully");
-
-        const appointmentCollection = client.db("Doctor").collection("appointments");
-        const scheduleCollection = client.db("Doctor").collection("schedules");
-        const usersCollection = client.db("Doctor").collection("user");
-        const drugCollection = client.db("Doctor").collection("drugs");
-        const testCollection = client.db("Doctor").collection("tests");
-        const noticeCollection = client.db("Doctor").collection("notices");
-        const headlineCollection = client.db("Doctor").collection("heddings");
-
-        // Import Routes
-        const appointmentRoutes = require("./routes/appointmentRoutes")(appointmentCollection);
-        app.use("/", appointmentRoutes);
-
-        const scheduleRoute = require("./routes/scheduleRoute")(scheduleCollection);
-        app.use("/", scheduleRoute);
-
-        const drugRoute = require("./routes/drugRoute")(drugCollection);
-        app.use("/", drugRoute);
-
-        const testRoute = require("./routes/testRoute")(testCollection);
-        app.use("/", testRoute);
-
-        const noticeRoute = require("./routes/noticeRoute")(noticeCollection, headlineCollection);
-        app.use("/", noticeRoute);
 
         // -------------------------------
         // 🔐 Firebase Token Verification
@@ -80,6 +57,43 @@ async function run() {
             }
             next();
         };
+
+        const verifyAssistant = async (req, res, next) => {
+            const email = req.decoded.email;
+            const user = await usersCollection.findOne({ email });
+
+            if (user?.role !== "AdminUser") {
+                return res.status(403).send({ message: "Forbidden access" });
+            }
+            next();
+        };
+
+        const appointmentCollection = client.db("Doctor").collection("appointments");
+        const scheduleCollection = client.db("Doctor").collection("schedules");
+        const usersCollection = client.db("Doctor").collection("user");
+        const drugCollection = client.db("Doctor").collection("drugs");
+        const testCollection = client.db("Doctor").collection("tests");
+        const noticeCollection = client.db("Doctor").collection("notices");
+        const headlineCollection = client.db("Doctor").collection("heddings");
+
+        app.use(verifyFBToken);
+        // Import Routes
+        const appointmentRoutes = require("./routes/appointmentRoutes")(appointmentCollection);
+        app.use("/", appointmentRoutes);
+
+        const scheduleRoute = require("./routes/scheduleRoute")(scheduleCollection);
+        app.use("/", scheduleRoute);
+
+        const drugRoute = require("./routes/drugRoute")(drugCollection);
+        app.use("/", drugRoute);
+
+        const testRoute = require("./routes/testRoute")(testCollection);
+        app.use("/", testRoute);
+
+        const noticeRoute = require("./routes/noticeRoute")(noticeCollection, headlineCollection);
+        app.use("/", noticeRoute);
+
+
 
         // -----------------------------------------
         // 🟦 Doctor List API (By Role)
