@@ -5,7 +5,7 @@ module.exports = function (scheduleCollection) {
     const app = express.Router();
 
     // 🔹 Create or Update Schedule (Upsert)
-    app.put("/schedule/update", async (req, res) => {
+    app.patch("/schedule/update", async (req, res) => {
         try {
             const data = req.body;
             if (!data.email)
@@ -18,6 +18,7 @@ module.exports = function (scheduleCollection) {
                     address: data.address,
                     contactPerson: data.contactPerson,
                     phone: data.phone,
+                    doctorEmail:data.doctorEmail || "",
                     email: data.email,
                     days: data.days || [],
                     updatedAt: new Date(),

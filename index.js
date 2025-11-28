@@ -76,7 +76,7 @@ async function run() {
         const noticeCollection = client.db("Doctor").collection("notices");
         const headlineCollection = client.db("Doctor").collection("heddings");
 
-        app.use(verifyFBToken);
+        
         // Import Routes
         const appointmentRoutes = require("./routes/appointmentRoutes")(appointmentCollection);
         app.use("/", appointmentRoutes);
