@@ -3,7 +3,7 @@ const { ObjectId } = require("mongodb");
 const { DateTime } = require("luxon");
 const crypto = require("crypto");
 
-module.exports = function (appointmentCollection) {
+module.exports = function (appointmentCollection, verifyFBToken, verifyDoctor, verifyAssistant, allowRoles) {
     const app = express.Router();
 
 
@@ -124,7 +124,7 @@ module.exports = function (appointmentCollection) {
     });
 
 
-    app.post("/appointments", async (req, res) => {
+    app.post("/appointments",verifyFBToken, allowRoles(["DoctorUser", "AssistantUser"]), async (req, res) => {
         try {
             const body = req.body || {};
             console.log("📩 Incoming appointment:", body);

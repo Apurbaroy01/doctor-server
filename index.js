@@ -58,15 +58,40 @@ async function run() {
             next();
         };
 
-        const verifyAssistant = async (req, res, next) => {
+        const verifyDoctor = async (req, res, next) => {
             const email = req.decoded.email;
             const user = await usersCollection.findOne({ email });
 
-            if (user?.role !== "AdminUser") {
+            if (user?.role !== "DoctorUser") {
                 return res.status(403).send({ message: "Forbidden access" });
             }
             next();
         };
+
+        const verifyAssistant = async (req, res, next) => {
+            const email = req.decoded.email;
+            const user = await usersCollection.findOne({ email });
+
+            if (user?.role !== "AssistantUser") {
+                return res.status(403).send({ message: "Forbidden access" });
+            }
+            next();
+        };
+
+
+        const allowRoles = (roles) => {
+            return async (req, res, next) => {
+                const email = req.decoded.email;
+                const user = await usersCollection.findOne({ email });
+
+                if (!user || !roles.includes(user.role)) {
+                    return res.status(403).send({ message: "Forbidden access" });
+                }
+
+                next();
+            };
+        };
+
 
         const appointmentCollection = client.db("Doctor").collection("appointments");
         const scheduleCollection = client.db("Doctor").collection("schedules");
@@ -76,9 +101,9 @@ async function run() {
         const noticeCollection = client.db("Doctor").collection("notices");
         const headlineCollection = client.db("Doctor").collection("heddings");
 
-        
+
         // Import Routes
-        const appointmentRoutes = require("./routes/appointmentRoutes")(appointmentCollection);
+        const appointmentRoutes = require("./routes/appointmentRoutes")(appointmentCollection, verifyFBToken, verifyDoctor, verifyAssistant, allowRoles);
         app.use("/", appointmentRoutes);
 
         const scheduleRoute = require("./routes/scheduleRoute")(scheduleCollection);
