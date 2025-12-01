@@ -4,6 +4,11 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const admin = require("firebase-admin");
 const serviceAccount = require("./adminsdk.json");
 
+
+const http = require("http");
+const { Server } = require("socket.io");
+
+
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -100,6 +105,9 @@ async function run() {
         const testCollection = client.db("Doctor").collection("tests");
         const noticeCollection = client.db("Doctor").collection("notices");
         const headlineCollection = client.db("Doctor").collection("heddings");
+        const CallCollection = client.db("Doctor").collection("calls");
+
+
 
 
         // Import Routes
@@ -117,6 +125,9 @@ async function run() {
 
         const noticeRoute = require("./routes/noticeRoute")(noticeCollection, headlineCollection);
         app.use("/", noticeRoute);
+
+        const call = require("./routes/call")(CallCollection);
+        app.use("/", call);
 
 
 
@@ -369,6 +380,46 @@ async function run() {
             const users = await usersCollection.find({ role: "AssistantUser", doctorEmail }).toArray();
             res.send(users);
         });
+
+
+
+
+
+
+        const server = http.createServer(app);
+
+        const io = new Server(server, {
+            cors: {
+                origin: "http://localhost:5000",
+                methods: ["GET", "POST"],
+            },
+        });
+
+        let connectedUsers = {};
+
+        io.on("connection", (socket) => {
+            console.log("New connection:", socket.id);
+
+            socket.on("join-room", (roomID) => {
+                connectedUsers[socket.id] = roomID;
+                socket.join(roomID);
+                socket.to(roomID).emit("user-joined", socket.id);
+            });
+
+            socket.on("signal", ({ to, data }) => {
+                io.to(to).emit("signal", { from: socket.id, data });
+            });
+
+            socket.on("disconnect", () => {
+                const roomID = connectedUsers[socket.id];
+                if (roomID) {
+                    socket.to(roomID).emit("user-left", socket.id);
+                    delete connectedUsers[socket.id];
+                }
+                console.log("Disconnected:", socket.id);
+            });
+        });
+
 
         // -----------------------------------------
         // Default Root
