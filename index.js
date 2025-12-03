@@ -19,7 +19,8 @@ admin.initializeApp({
 
 
 app.use(cors({
-    origin: ["http://localhost:5173", "http://192.168.68.56:5173"],   // Your React frontend
+    origin: "*",  // Your React frontend
+    // origin: ["http://localhost:5173", "http://192.168.68.58:5173"],   // Your React frontend
     methods: ["GET", "POST", "PUT", "DELETE"],
 }));
 app.use(express.json());
@@ -149,7 +150,7 @@ async function run() {
 
         const io = new Server(server, {
             cors: {
-                origin: ["http://localhost:5173", "http://192.168.68.56:5173"],
+                origin: "*",
                 methods: ["GET", "POST"],
             },
         });
@@ -189,7 +190,11 @@ async function run() {
             res.send("Doctor Server is Running 🚀");
         });
 
-        app.listen(port, "0.0.0.0");
+        // ✅ Correct: server.listen()
+        server.listen(port, "0.0.0.0", () => {
+            console.log(`Server running on port ${port}`);
+        })
+
 
     } catch (error) {
         console.error("❌ MongoDB Connection Error:", error.message);
