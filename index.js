@@ -21,7 +21,7 @@ admin.initializeApp({
 app.use(cors({
     origin: "*",  // Your React frontend
     // origin: ["http://localhost:5173", "http://192.168.68.58:5173"],   // Your React frontend
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
 }));
 app.use(express.json());
 

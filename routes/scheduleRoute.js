@@ -14,11 +14,17 @@ module.exports = function (scheduleCollection) {
             const query = { email: data.email };
             const updateDoc = {
                 $set: {
+                    name: data.name,
+                    photo: data.photo,
+                    doctorPhone: data.phone,
+                    profession: data.profession,
+
+
                     title: data.title,
                     address: data.address,
                     contactPerson: data.contactPerson,
                     phone: data.phone,
-                    doctorEmail:data.doctorEmail || "",
+                    doctorEmail: data.doctorEmail || "",
                     email: data.email,
                     days: data.days || [],
                     updatedAt: new Date(),

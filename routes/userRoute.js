@@ -4,7 +4,7 @@ const express = require("express");
 module.exports = function (usersCollection) {
     const app = express.Router();
     const admin = require("firebase-admin");
-    
+
 
     // -----------------------------------------
     // 🟦 Doctor List API (By Role)
@@ -77,6 +77,44 @@ module.exports = function (usersCollection) {
             res.status(400).json({ success: false, error: error.message });
         }
     });
+
+    // doctor profile update
+    app.patch("/doctorProfile/update", async (req, res) => {
+        try {
+            const data = req.body;
+            if (!data.email) {
+                return res.status(400).json({success: false, message: "Email is required", });
+            }
+
+            const query = { email: data.email };
+
+            // build update object from client data
+            const updateDoc = {
+                $set: {
+                    name: data.name,
+                    photo: data.photo,
+                    email: data.email,
+                    phone: data.phone,
+                    profession: data.profession,
+                    updatedAt: new Date(),
+                },
+            };
+
+            // update database
+            const result = await usersCollection.updateOne(query, updateDoc, {
+                upsert: true,
+            });
+
+            res.json({ success: true, result });
+
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message,
+            });
+        }
+    });
+
 
     // -----------------------------------------
     // 👨‍⚕️ Doctor Assistant Creation (Default active )
@@ -253,6 +291,15 @@ module.exports = function (usersCollection) {
     app.get("/assistant/create-user", async (req, res) => {
         const doctorEmail = req.query.doctorEmail;
         const users = await usersCollection.find({ role: "AssistantUser", doctorEmail }).toArray();
+        res.send(users);
+    });
+
+    // -----------------------------------------
+    // 🟥 Get doctor profile
+    // -----------------------------------------
+    app.get("/doctor/profile", async (req, res) => {
+        const email = req.query.email;
+        const users = await usersCollection.find({ email:email}).toArray();
         res.send(users);
     });
 
