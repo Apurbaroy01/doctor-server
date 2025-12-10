@@ -8,6 +8,9 @@ module.exports = function (scheduleCollection) {
     app.patch("/schedule/update", async (req, res) => {
         try {
             const data = req.body;
+            const {email, name, photo} = data;
+            console.log(email,name,photo);
+
             if (!data.email)
                 return res.status(400).send({ success: false, message: "Email required" });
 
@@ -18,8 +21,34 @@ module.exports = function (scheduleCollection) {
                     photo: data.photo,
                     doctorPhone: data.phone,
                     profession: data.profession,
+                },
+            };
 
+            const result = await scheduleCollection.updateOne(query, updateDoc, {
+                upsert: true,
+            });
 
+            res.send({ success: true, result });
+        } catch (error) {
+            console.error("Error updating schedule:", error);
+            res.status(500).send({ success: false, message: "Server error" });
+        }
+    });
+
+    
+    // 🔹 Create or Update Schedule (Upsert)
+    app.put("/schedule/update", async (req, res) => {
+        try {
+            const data = req.body;
+            const {email, name, photo} = data;
+            console.log(email,name,photo);
+
+            if (!data.email)
+                return res.status(400).send({ success: false, message: "Email required" });
+
+            const query = { email: data.email };
+            const updateDoc = {
+                $set: {
                     title: data.title,
                     address: data.address,
                     contactPerson: data.contactPerson,
