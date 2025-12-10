@@ -55,6 +55,22 @@ module.exports = function (scheduleCollection) {
         }
     });
 
+
+    // 🔹admin doctor Get Schedule by Email
+    app.get("/schedules/:email", async (req, res) => {
+        const email = req.params.email;
+        try {
+            const result = await scheduleCollection.find({ doctorEmail : email }).toArray();
+            if (!result)
+                return res.status(404).send({ success: false, message: "Not found" });
+            res.send(result);
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).send({ success: false, message: "Server error" });
+        }
+    });
+
     // 🔹 Get All Schedules
     app.get("/schedule", async (req, res) => {
         try {
