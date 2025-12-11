@@ -111,6 +111,22 @@ module.exports = function (scheduleCollection) {
         }
     });
 
+    // 🔹 Get one Schedules hospital data by print
+    app.get("/hospital", async (req, res) => {
+        const email = req.query.email;
+        try {
+            const result = await scheduleCollection.findOne({ email });
+            if (!result)
+                return res.status(404).send({ success: false, message: "Not found" });
+
+            res.send({ success: true, data: result });
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).send({ success: false, message: "Server error" });
+        }
+    });
+
     // 🔹 Delete Schedule
     app.delete("/schedule/:email", async (req, res) => {
         try {
