@@ -11,6 +11,7 @@ const port = process.env.PORT || 5000;
 const admin = require("firebase-admin");
 
 const serviceAccount = require("./adminsdk.json");
+const { Console } = require("console");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
@@ -44,6 +45,7 @@ async function run() {
         // -------------------------------
         const verifyFBToken = async (req, res, next) => {
             const authHeader = req.headers.authorization;
+            console.log("Auth Header:", authHeader);
             if (!authHeader) {
                 return res.status(401).send({ message: 'Unauthorized access' });
             }
