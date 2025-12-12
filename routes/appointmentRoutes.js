@@ -287,7 +287,7 @@ module.exports = function (appointmentCollection, verifyFBToken, verifyDoctor, v
     });
 
     // ✅ Get all payments
-    app.get("/payments", async (req, res) => {
+    app.get("/payments",verifyFBToken, async (req, res) => {
         const doctorEmail = req.query.email;
         const query = {
             $or: [

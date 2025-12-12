@@ -46,22 +46,34 @@ async function run() {
         const verifyFBToken = async (req, res, next) => {
             const authHeader = req.headers.authorization;
             console.log("Auth Header:", authHeader);
+
             if (!authHeader) {
-                return res.status(401).send({ message: 'Unauthorized access' });
+                return res.status(401).send({ message: 'Invalid token' });
             }
+
             const token = authHeader.split(' ')[1];
             if (!token) {
-                return res.status(401).send({ message: 'Unauthorized access' });
+                return res.status(401).send({ message: 'Invalid token' });
             }
 
             try {
-                const decoded = await admin.auth().verifyIdToken(token);
+                const decoded = await admin.auth().verifyIdToken(token, true);
+
+                const now = Math.floor(Date.now() / 1000);
+                const sessionTimeout = 3600; // 1 hour
+
+                // token issue time check
+                if (now - decoded.iat > sessionTimeout) {
+                    return res.status(440).json({ message: "Session expired" });
+                }
+
                 req.decoded = decoded;
                 next();
             } catch (error) {
-                return res.status(401).send({ message: "Unauthorized access" });
+                return res.status(401).send({ message: "Invalid token" });
             }
         };
+
 
         const verifyAdmin = async (req, res, next) => {
             const email = req.decoded.email;
