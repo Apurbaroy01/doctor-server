@@ -153,8 +153,8 @@ async function run() {
         const userRoute = require("./routes/userRoute")(usersCollection);
         app.use("/", userRoute);
 
-        const call = require("./routes/call")(CallCollection);
-        app.use("/", call);
+        // const call = require("./routes/call")(CallCollection);
+        // app.use("/", call);
 
 
         // -----------------------------------------
