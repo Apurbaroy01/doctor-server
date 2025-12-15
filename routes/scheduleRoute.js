@@ -1,75 +1,63 @@
 // routes/scheduleRoute.js
 const express = require("express");
 
-module.exports = function (scheduleCollection) {
+module.exports = function (scheduleCollection, usersCollection) {
     const app = express.Router();
 
-    // 🔹 Create or Update Schedule (Upsert)
-    app.patch("/schedule/update", async (req, res) => {
-        try {
-            const data = req.body;
-            const {email, name, photo} = data;
-            console.log(email,name,photo);
 
-            if (!data.email)
-                return res.status(400).send({ success: false, message: "Email required" });
-
-            const query = { email: data.email };
-            const updateDoc = {
-                $set: {
-                    name: data.name,
-                    photo: data.photo,
-                    doctorPhone: data.phone,
-                    profession: data.profession,
-                },
-            };
-
-            const result = await scheduleCollection.updateOne(query, updateDoc, {
-                upsert: true,
-            });
-
-            res.send({ success: true, result });
-        } catch (error) {
-            console.error("Error updating schedule:", error);
-            res.status(500).send({ success: false, message: "Server error" });
-        }
-    });
-
-    
-    // 🔹 Create or Update Schedule (Upsert)
     app.put("/schedule/update", async (req, res) => {
         try {
             const data = req.body;
-            const {email, name, photo} = data;
-            console.log(email,name,photo);
+            const { email, title, address, contactPerson, phone, doctorEmail, days } = data;
 
-            if (!data.email)
-                return res.status(400).send({ success: false, message: "Email required" });
+            if (!email) {
+                return res
+                    .status(400)
+                    .send({ success: false, message: "Email required" });
+            }
 
-            const query = { email: data.email };
+            // 1️⃣ Fetch doctor info from userCollection
+            const doctorInfo = await usersCollection.findOne({ email: doctorEmail });
+
+            // 2️⃣ Prepare update document
             const updateDoc = {
                 $set: {
-                    title: data.title,
-                    address: data.address,
-                    contactPerson: data.contactPerson,
-                    phone: data.phone,
-                    doctorEmail: data.doctorEmail || "",
-                    email: data.email,
-                    days: data.days || [],
+                    title,
+                    address,
+                    contactPerson,
+                    phone,
+                    doctorEmail: doctorEmail || "",
+                    email,
+                    days: days || [],
                     updatedAt: new Date(),
+                    // Merge doctor info into schedule
+                    doctorName: doctorInfo?.name || "",
+                    doctorPhoto: doctorInfo?.photo || "",
+                    doctorProfession: doctorInfo?.profession || "",
+                    doctorPhone: doctorInfo?.phone || "",
                 },
             };
 
-            const result = await scheduleCollection.updateOne(query, updateDoc, {
-                upsert: true,
-            });
+            // 3️⃣ Update scheduleCollection
+            const result = await scheduleCollection.updateOne(
+                { email },
+                updateDoc,
+                { upsert: true }
+            );
 
-            res.send({ success: true, result });
+            // 4️⃣ Return combined response
+            res.send({
+                success: true,
+                scheduleResult: result,
+                doctorInfo: doctorInfo || null,
+            });
         } catch (error) {
             console.error("Error updating schedule:", error);
             res.status(500).send({ success: false, message: "Server error" });
         }
     });
+
+
 
     // 🔹 Get Schedule by Email
     app.get("/schedule/:email", async (req, res) => {
@@ -89,7 +77,7 @@ module.exports = function (scheduleCollection) {
     app.get("/schedules/:email", async (req, res) => {
         const email = req.params.email;
         try {
-            const result = await scheduleCollection.find({ doctorEmail : email }).toArray();
+            const result = await scheduleCollection.find({ doctorEmail: email }).toArray();
             if (!result)
                 return res.status(404).send({ success: false, message: "Not found" });
             res.send(result);
@@ -114,6 +102,7 @@ module.exports = function (scheduleCollection) {
     // 🔹 Get one Schedules hospital data by print
     app.get("/hospital", async (req, res) => {
         const email = req.query.email;
+        
         try {
             const result = await scheduleCollection.findOne({ email });
             if (!result)

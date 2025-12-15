@@ -138,7 +138,7 @@ async function run() {
         const appointmentRoutes = require("./routes/appointmentRoutes")(appointmentCollection, verifyFBToken, verifyDoctor, verifyAssistant, allowRoles);
         app.use("/", appointmentRoutes);
 
-        const scheduleRoute = require("./routes/scheduleRoute")(scheduleCollection);
+        const scheduleRoute = require("./routes/scheduleRoute")(scheduleCollection,usersCollection);
         app.use("/", scheduleRoute);
 
         const drugRoute = require("./routes/drugRoute")(drugCollection);
