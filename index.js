@@ -128,6 +128,7 @@ async function run() {
         const noticeCollection = client.db("Doctor").collection("notices");
         const headlineCollection = client.db("Doctor").collection("heddings");
         const CallCollection = client.db("Doctor").collection("calls");
+        const messagesCollection = client.db("Doctor").collection("messages");
 
 
 
@@ -138,7 +139,7 @@ async function run() {
         const appointmentRoutes = require("./routes/appointmentRoutes")(appointmentCollection, verifyFBToken, verifyDoctor, verifyAssistant, allowRoles);
         app.use("/", appointmentRoutes);
 
-        const scheduleRoute = require("./routes/scheduleRoute")(scheduleCollection,usersCollection);
+        const scheduleRoute = require("./routes/scheduleRoute")(scheduleCollection, usersCollection);
         app.use("/", scheduleRoute);
 
         const drugRoute = require("./routes/drugRoute")(drugCollection);
@@ -169,30 +170,83 @@ async function run() {
             },
         });
 
-        let connectedUsers = {};
+        // let connectedUsers = {};
 
-        io.on("connection", (socket) => {
-            console.log("🟢 New user connected:", socket.id);
+        io.on('connection', (socket) => {
+            console.log('a user connected:', socket.id, "is connected");
 
-            socket.on("join-room", (roomID) => {
-                connectedUsers[socket.id] = roomID;
-                socket.join(roomID);
-                socket.to(roomID).emit("user-joined", socket.id);
-            });
+            // handle join room
+            socket.on("user_join_Room", async (data) => {
+                const { username, roomId } = data || {};
+                console.log("Join Room Data:", data);
 
-            socket.on("signal", ({ to, data }) => {
-                io.to(to).emit("signal", { from: socket.id, data });
-            });
+                socket.join(roomId);
 
-            socket.on("disconnect", () => {
-                const roomID = connectedUsers[socket.id];
-                if (roomID) {
-                    socket.to(roomID).emit("user-left", socket.id);
-                    delete connectedUsers[socket.id];
+                // notify others in room
+                socket.to(roomId).emit("user_join_Room", {
+                    text: `${username} has joined the chat room.`,
+                });
+
+                // 1️⃣ Fetch previous messages from MongoDB and send to this user
+                try {
+                    const messages = await messagesCollection
+                        .find({ roomId })
+                        .sort({ timestamp: 1 })
+                        .toArray();
+
+                    // Send previous messages ONLY to the joining user
+                    socket.emit("room_messages", messages);
+                } catch (error) {
+                    console.error("Error fetching messages from MongoDB:", error);
                 }
-                console.log("🔴 User Disconnected:", socket.id);
-            });
-        });
+
+
+                console.log(`user with id: ${username} joined room: ${roomId}`);
+
+                // broadcast the message  to everyone in the room
+                socket.on("send_message", async ({ username, roomId, text }) => {
+
+                    try {
+                        // Save message to MongoDB
+                        const messageDocument = {
+                            username,
+                            roomId,
+                            text,
+                            type: "regular",
+                            timestamp: new Date(),
+                        };
+                        const result = await messagesCollection.insertOne(messageDocument);
+
+                        // 2️⃣ Emit message to everyone in the room (including sender)
+                        socket.to(roomId).emit("message", {
+                            // _id: result.insertedId,
+                            ...messageDocument,
+                        });
+
+                    } catch (error) {
+                        console.error("Error saving message to MongoDB:", error);
+                    }
+
+                    // socket.to(roomId).emit("message", { username, text, type: "regular" });
+                })
+
+                // handle user disconnect
+                socket.on("user_left_Room", ({ username, roomId }) => {
+                    socket.to(roomId).emit("message", {
+                        username,
+                        text: `${username} has left the chat room.`, type: 'notif',
+                    });
+
+                })
+
+                // Detecting typing activity
+                socket.on("user_typing", ({ username, roomId }) => {
+                    // send to everyone in room EXCEPT sender
+                    socket.to(roomId).emit("user_typing", { username });
+                });
+
+            })
+        })
 
 
 
