@@ -219,7 +219,7 @@ async function run() {
 
                         // 2️⃣ Emit message to everyone in the room (including sender)
                         socket.to(roomId).emit("message", {
-                            // _id: result.insertedId,
+                            _id: result.insertedId,
                             ...messageDocument,
                         });
 
