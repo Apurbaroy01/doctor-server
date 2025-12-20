@@ -204,17 +204,19 @@ async function run() {
                 console.log(`user with id: ${username} joined room: ${roomId}`);
 
                 // broadcast the message  to everyone in the room
-                socket.on("send_message", async ({ username, roomId, text }) => {
+                socket.on("send_message", async ({ username, roomId, text,id }) => {
 
                     try {
                         // Save message to MongoDB
                         const messageDocument = {
+                            id,
                             username,
                             roomId,
                             text,
                             type: "regular",
                             timestamp: new Date(),
                         };
+                        
                         const result = await messagesCollection.insertOne(messageDocument);
 
                         // 2️⃣ Emit message to everyone in the room (including sender)
@@ -244,6 +246,28 @@ async function run() {
                     // send to everyone in room EXCEPT sender
                     socket.to(roomId).emit("user_typing", { username });
                 });
+
+                // edit message
+                socket.on("edit_message", async ({ messageId, newText, roomId }) => {
+                    await messagesCollection.updateOne(
+                        { id:messageId },
+                        { $set: { text: newText, edited: true } }
+                    );
+
+                    io.to(roomId).emit("message_edited", {
+                        messageId,
+                        newText,
+                    });
+                });
+
+                // delete message
+                socket.on("delete_message", async ({ messageId, roomId }) => {
+                    await messagesCollection.deleteOne({ id: messageId });
+
+                    io.to(roomId).emit("message_deleted", messageId);
+                });
+
+
 
             })
         })
