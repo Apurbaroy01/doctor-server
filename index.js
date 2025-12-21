@@ -172,105 +172,57 @@ async function run() {
 
         // let connectedUsers = {};
 
-        io.on('connection', (socket) => {
-            console.log('a user connected:', socket.id, "is connected");
+        io.on("connection", (socket) => {
+            console.log("Connected:", socket.id);
 
-            // handle join room
-            socket.on("user_join_Room", async (data) => {
-                const { username, roomId } = data || {};
-                console.log("Join Room Data:", data);
-
+            socket.on("user_join_Room", async ({ username, roomId }) => {
                 socket.join(roomId);
 
-                // notify others in room
                 socket.to(roomId).emit("user_join_Room", {
-                    text: `${username} has joined the chat room.`,
+                    text: `${username} joined the room`,
                 });
 
-                // 1️⃣ Fetch previous messages from MongoDB and send to this user
-                try {
-                    const messages = await messagesCollection
-                        .find({ roomId })
-                        .sort({ timestamp: 1 })
-                        .toArray();
+                const messages = await messagesCollection
+                    .find({ roomId })
+                    .sort({ timestamp: 1 })
+                    .toArray();
 
-                    // Send previous messages ONLY to the joining user
-                    socket.emit("room_messages", messages);
-                } catch (error) {
-                    console.error("Error fetching messages from MongoDB:", error);
-                }
+                socket.emit("room_messages", messages);
+            });
 
+            socket.on("send_message", async (data) => {
+                const message = {
+                    ...data,
+                    timestamp: new Date(),
+                };
 
-                console.log(`user with id: ${username} joined room: ${roomId}`);
+                await messagesCollection.insertOne(message);
 
-                // broadcast the message  to everyone in the room
-                socket.on("send_message", async ({ username, roomId, text,id }) => {
+                socket.to(data.roomId).emit("message", message);
+            });
 
-                    try {
-                        // Save message to MongoDB
-                        const messageDocument = {
-                            id,
-                            username,
-                            roomId,
-                            text,
-                            type: "regular",
-                            timestamp: new Date(),
-                        };
-                        
-                        const result = await messagesCollection.insertOne(messageDocument);
+            socket.on("user_typing", ({ username, roomId }) => {
+                socket.to(roomId).emit("user_typing", { username });
+            });
 
-                        // 2️⃣ Emit message to everyone in the room (including sender)
-                        socket.to(roomId).emit("message", {
-                            _id: result.insertedId,
-                            ...messageDocument,
-                        });
+            socket.on("edit_message", async ({ messageId, newText, roomId }) => {
+                await messagesCollection.updateOne(
+                    { id: messageId },
+                    { $set: { text: newText, edited: true } }
+                );
 
-                    } catch (error) {
-                        console.error("Error saving message to MongoDB:", error);
-                    }
-
-                    // socket.to(roomId).emit("message", { username, text, type: "regular" });
-                })
-
-                // handle user disconnect
-                socket.on("user_left_Room", ({ username, roomId }) => {
-                    socket.to(roomId).emit("message", {
-                        username,
-                        text: `${username} has left the chat room.`, type: 'notif',
-                    });
-
-                })
-
-                // Detecting typing activity
-                socket.on("user_typing", ({ username, roomId }) => {
-                    // send to everyone in room EXCEPT sender
-                    socket.to(roomId).emit("user_typing", { username });
+                io.to(roomId).emit("message_edited", {
+                    messageId,
+                    newText,
                 });
+            });
 
-                // edit message
-                socket.on("edit_message", async ({ messageId, newText, roomId }) => {
-                    await messagesCollection.updateOne(
-                        { id:messageId },
-                        { $set: { text: newText, edited: true } }
-                    );
+            socket.on("delete_message", async ({ messageId, roomId }) => {
+                await messagesCollection.deleteOne({ id: messageId });
+                io.to(roomId).emit("message_deleted", messageId);
+            });
+        });
 
-                    io.to(roomId).emit("message_edited", {
-                        messageId,
-                        newText,
-                    });
-                });
-
-                // delete message
-                socket.on("delete_message", async ({ messageId, roomId }) => {
-                    await messagesCollection.deleteOne({ id: messageId });
-
-                    io.to(roomId).emit("message_deleted", messageId);
-                });
-
-
-
-            })
-        })
 
 
 
