@@ -223,6 +223,20 @@ async function run() {
             });
         });
 
+        // -----------------------------------------
+        // 🟥 Get assistant Users (FIXED)
+        // -----------------------------------------
+        app.get("/assistant/user/:doctorEmail", async (req, res) => {
+            const doctorEmail = req.params.doctorEmail;
+
+            const users = await usersCollection
+                .find({ role: "AssistantUser", doctorEmail })
+                .toArray();
+
+            res.send(users);
+        });
+
+
 
 
 
