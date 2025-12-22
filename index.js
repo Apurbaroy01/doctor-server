@@ -11,7 +11,7 @@ const port = process.env.PORT || 5000;
 const admin = require("firebase-admin");
 
 const serviceAccount = require("./adminsdk.json");
-const { Console } = require("console");
+const { Console, log } = require("console");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
@@ -177,6 +177,8 @@ async function run() {
 
             socket.on("user_join_Room", async ({ username, roomId }) => {
                 socket.join(roomId);
+                console.log(`User ${username} joined room ${roomId}`);
+
 
                 socket.to(roomId).emit("user_join_Room", {
                     text: `${username} joined the room`,
