@@ -204,7 +204,17 @@ async function run() {
             });
 
             socket.on("message_seen", ({ messageId, roomId }) => {
-                socket.to(roomId).emit("message_seen", { messageId });
+                try {
+                    messagesCollection.updateOne(
+                        { id: messageId },
+                        { $set: { seen: true } }
+                    );
+
+                    socket.to(roomId).emit("message_seen", { messageId });
+                } catch (error) {
+                    console.error("message_seen update failed:", error);
+                }
+
             });
 
 
