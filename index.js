@@ -203,6 +203,11 @@ async function run() {
                 socket.to(data.roomId).emit("message", message);
             });
 
+            socket.on("message_seen", ({ messageId, roomId }) => {
+                socket.to(roomId).emit("message_seen", { messageId });
+            });
+
+
             socket.on("user_typing", ({ username, roomId }) => {
                 socket.to(roomId).emit("user_typing", { username });
             });

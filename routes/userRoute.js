@@ -83,7 +83,7 @@ module.exports = function (usersCollection) {
         try {
             const data = req.body;
             if (!data.email) {
-                return res.status(400).json({success: false, message: "Email is required", });
+                return res.status(400).json({ success: false, message: "Email is required", });
             }
 
             const query = { email: data.email };
@@ -299,9 +299,42 @@ module.exports = function (usersCollection) {
     // -----------------------------------------
     app.get("/doctor/profile", async (req, res) => {
         const email = req.query.email;
-        const users = await usersCollection.find({ email:email}).toArray();
+        const users = await usersCollection.find({ email: email }).toArray();
         res.send(users);
     });
+
+
+    // -----------------------------------------
+    // 👑 user-register
+    // -----------------------------------------
+    app.post("/user-register", async (req, res) => {
+        try {
+            const user = req.body;
+
+            const insertDoc = {
+                ...user,
+                role: "PatientUser",
+                createdAt: new Date(),
+                active: true,
+            };
+
+            const result = await usersCollection.insertOne(insertDoc);
+
+            res.status(201).json({
+                success: true,
+                message: "User registered successfully",
+                userId: result.insertedId,
+            });
+
+        } catch (error) {
+            console.error("User register error:", error);
+            res.status(500).json({
+                success: false,
+                error: "User registration failed",
+            });
+        }
+    });
+
 
 
     return app;
