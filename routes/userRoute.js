@@ -96,6 +96,8 @@ module.exports = function (usersCollection) {
                     email: data.email,
                     phone: data.phone,
                     profession: data.profession,
+                    hospitalName: data.hospitalName,
+                    address: data.address,
                     updatedAt: new Date(),
                 },
             };
@@ -334,6 +336,63 @@ module.exports = function (usersCollection) {
             });
         }
     });
+
+    // patient user----------------------------------------------------------------------------------------------------------------------------------
+
+    // -----------------------------------------
+    // 🟦 Doctor List appiont patientuser
+    // -----------------------------------------
+    app.get("/alldoctors-list", async (req, res) => {
+        try {
+            const result = await usersCollection
+                .find(
+                    { role: "DoctorUser" },
+                    {
+                        projection: {
+                            _id: 1,
+                            name: 1,
+                            email: 1,
+                            phone: 1,
+                            profession: 1,
+                            photo: 1,
+                            active: 1
+                        }
+                    }
+                )
+                .toArray();
+
+            res.status(200).send(result);
+        } catch (error) {
+            console.error("Error fetching doctors:", error);
+            res.status(500).send({
+                message: "Failed to load doctors",
+                error: error.message
+            });
+        }
+    });
+
+    // -----------------------------------------
+    // 🟥 Get assistant Users by patientuser
+    // -----------------------------------------
+    app.get("/assistant-list", async (req, res) => {
+        const doctorEmail = req.query.doctorEmail;
+        const users = await usersCollection.find({ role: "AssistantUser", doctorEmail },
+            {
+                projection: {
+                    _id: 1,
+                    name: 1,
+                    hospitalName: 1,
+                    email: 1,
+                    phone: 1,
+                    photo: 1,
+                    active: 1
+                }
+            }
+        ).toArray();
+        res.send(users);
+    });
+
+
 
 
 
