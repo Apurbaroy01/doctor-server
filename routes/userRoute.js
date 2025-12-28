@@ -393,6 +393,21 @@ module.exports = function (usersCollection) {
     });
 
 
+    // -----------------------------------------
+    // 🟦 Get profile by email
+    // -----------------------------------------
+    app.get("/myuser", async (req, res) => {
+        const email = req.query.email;
+        const doctor = await usersCollection.findOne({ email });
+
+        if (!doctor) {
+            return res.status(404).send({ message: "Doctor not found" });
+        }
+
+        res.send(doctor);
+    });
+
+
 
 
 
