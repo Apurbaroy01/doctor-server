@@ -186,7 +186,7 @@ module.exports = function (appointmentCollection, verifyFBToken, verifyDoctor, v
 
 
 
-    app.delete("/appointments/:id",verifyFBToken, verifyDoctor, async (req, res) => {
+    app.delete("/appointments/:id", verifyFBToken, verifyDoctor, async (req, res) => {
         try {
             const result = await appointmentCollection.deleteOne({ _id: new ObjectId(req.params.id) });
             res.send(result);
@@ -287,7 +287,7 @@ module.exports = function (appointmentCollection, verifyFBToken, verifyDoctor, v
     });
 
     // ✅ Get all payments
-    app.get("/payments",verifyFBToken, async (req, res) => {
+    app.get("/payments", verifyFBToken, async (req, res) => {
         const doctorEmail = req.query.email;
         const query = {
             $or: [
@@ -311,6 +311,114 @@ module.exports = function (appointmentCollection, verifyFBToken, verifyDoctor, v
         }
 
     });
+
+
+    // patient user-------------------------------------------------------------
+
+    app.post("/patient-appointments", async (req, res) => {
+        try {
+            const body = req.body || {};
+            console.log("📩 Incoming appointment:", body);
+
+            const { mobile } = body;
+            if (!mobile) {
+                return res.status(400).send({ message: "Email is required" });
+            }
+
+            /* ================= VALIDATION ================= */
+            if (!body.date || !body.time || !body.doctorEmail || !body.mobile) {
+                return res.status(400).send({
+                    message: "Missing required appointment fields",
+                });
+            }
+
+            /* ================= TIME PARSE ================= */
+            const timeMinutes = timeToMinutes(body.time);
+            if (timeMinutes == null) {
+                return res.status(400).send({
+                    message: "Invalid time format. Use like '10:20 AM'",
+                });
+            }
+
+            /* ================= SLOT CLASH ================= */
+            const clash = await appointmentCollection.findOne({
+                date: body.date,
+                time: body.time,
+                doctorEmail: body.doctorEmail,
+            });
+
+            if (clash) {
+                return res.status(409).send({
+                    message: "This time slot is already booked",
+                });
+            }
+
+            /* ================= TRACKING ID ================= */
+            let trackingId;
+            const previous = await appointmentCollection.findOne({
+                mobile: body.mobile,
+                doctorEmail: body.doctorEmail,
+            });
+
+            if (previous) {
+                trackingId = previous.trackingId;
+            } else {
+                trackingId = `TRK-${crypto
+                    .randomBytes(4)
+                    .toString("hex")
+                    .toUpperCase()}`;
+            }
+
+            /* ================= FINAL DOC ================= */
+            const doc = {
+                ...body,
+                timeMinutes,
+                trackingId,
+                status: "Pending",
+                payment: "Unpaid",
+                createdby: "Patient",
+                createdAt: new Date(),
+            };
+
+            const result = await appointmentCollection.insertOne(doc);
+
+            res.send({
+                success: true,
+                trackingId,
+                insertedId: result.insertedId,
+            });
+        } catch (err) {
+            console.error("❌ POST /patient-appointments error:", err);
+
+            res.status(500).send({
+                message: "Failed to create appointment",
+            });
+        }
+    });
+
+
+    // ✅ GET: Fetch patirnt all appointments (filter by email/date/search/payment)
+    app.get("/patient-Appointments", async (req, res) => {
+        try {
+            let { phone } = req.query;
+
+            if (!phone) {
+                return res.status(400).send({ message: "Email is required" });
+            }
+            const query = { mobile: phone };
+            
+            const docs = await appointmentCollection
+                .find(query)
+                .sort({ date: 1, timeMinutes: 1, time: 1 })
+                .toArray();
+
+            res.status(200).send(docs);
+        } catch (err) {
+            console.error("❌ GET /appointments error:", err);
+            res.status(500).send({ message: "Failed to fetch appointments" });
+        }
+    });
+
 
 
 
