@@ -225,6 +225,21 @@ module.exports = function (appointmentCollection, verifyFBToken, verifyDoctor, v
         res.send(result);
     });
 
+    // add templeate
+    app.patch("/template/:id", async (req, res) => {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        const query = { _id: new ObjectId(id) };
+
+        const updateDoc = {
+            $set: updateData,  // body তে যা থাকবে সব আপডেট হবে
+        };
+
+        const result = await appointmentCollection.updateOne(query, updateDoc);
+        res.send(result);
+    });
+
 
 
 
