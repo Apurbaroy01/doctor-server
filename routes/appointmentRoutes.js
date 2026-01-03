@@ -225,21 +225,6 @@ module.exports = function (appointmentCollection, verifyFBToken, verifyDoctor, v
         res.send(result);
     });
 
-    // add templeate
-    app.patch("/template/:id", async (req, res) => {
-        const { id } = req.params;
-        const updateData = req.body;
-
-        const query = { _id: new ObjectId(id) };
-
-        const updateDoc = {
-            $set: updateData,  // body তে যা থাকবে সব আপডেট হবে
-        };
-
-        const result = await appointmentCollection.updateOne(query, updateDoc);
-        res.send(result);
-    });
-
 
 
 
@@ -301,7 +286,7 @@ module.exports = function (appointmentCollection, verifyFBToken, verifyDoctor, v
         }
     });
 
-    // ✅ Get all payments
+    // ✅ Get all payments--------------------------------------------------------------------------------------------------------------------------------------
     app.get("/payments", verifyFBToken, async (req, res) => {
         const doctorEmail = req.query.email;
         const query = {
@@ -318,7 +303,7 @@ module.exports = function (appointmentCollection, verifyFBToken, verifyDoctor, v
 
     });
     // ✅ Get all payments
-    app.get("/assistant/payments", async (req, res) => {
+    app.get("/assistant/payments",verifyFBToken, async (req, res) => {
         const assistantEmail = req.query.email;
         if (assistantEmail) {
             const drugs = await appointmentCollection.find({ assistantEmail: assistantEmail }).sort({ name: 1 }).toArray();
@@ -328,7 +313,7 @@ module.exports = function (appointmentCollection, verifyFBToken, verifyDoctor, v
     });
 
 
-    // patient user-------------------------------------------------------------
+    // patient user---------------------------------------------------------------------------------------------------------------------------------------------
 
     app.post("/patient-appointments", async (req, res) => {
         try {
