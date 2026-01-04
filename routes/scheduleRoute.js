@@ -8,7 +8,7 @@ module.exports = function (scheduleCollection, usersCollection) {
     app.put("/schedule/update", async (req, res) => {
         try {
             const data = req.body;
-            const { email, title, address, contactPerson, phone, doctorEmail, days } = data;
+            const { email, title, address, contactPerson, phone, doctorEmail, days, doctorFee } = data;
 
             if (!email) {
                 return res
@@ -26,6 +26,7 @@ module.exports = function (scheduleCollection, usersCollection) {
                     address,
                     contactPerson,
                     phone,
+                    doctorFee,
                     doctorEmail: doctorEmail || "",
                     email,
                     days: days || [],
